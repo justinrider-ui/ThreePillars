@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Print Trackers — Pack 369</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .print-controls { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .print-controls label { margin: 0; text-transform: none; font-size: 0.88rem; font-weight: 600; color: var(--ink); }
+
+    /* ── PRINT SHEET ── */
+    .print-sheet {
+      background: white;
+      width: 100%;
+      max-width: 9in;
+      margin: 0 auto 2rem;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .sheet-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 18px 10px;
+      border-bottom: 3px solid var(--sheet-color);
+    }
+    .sheet-badge {
+      width: 58px; height: 58px;
+      border-radius: 50%;
+      background: var(--sheet-color);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      border: 3px solid var(--gold);
+      flex-shrink: 0;
+      font-size: 24px;
+    }
+    .sheet-title-block { flex: 1; }
+    .sheet-pack { font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--sheet-color); }
+    .sheet-title { font-size: 22px; font-weight: 900; color: var(--ink); font-family: Georgia, serif; }
+    .sheet-title em { color: var(--sheet-color); font-style: normal; }
+    .sheet-sub { font-size: 10px; color: #666; margin-top: 1px; }
+
+    .sheet-oath { background: var(--sheet-color); color: white; text-align: center; padding: 4px 12px; font-size: 11px; font-weight: 600; letter-spacing: 1px; margin: 0 18px 10px; border-radius: 4px; }
+
+    .sheet-fields { display: grid; grid-template-columns: 2fr 1.2fr 1.2fr 1fr; gap: 10px; padding: 0 18px 10px; }
+    .sheet-field { border-bottom: 1.5px solid var(--sheet-color); }
+    .sheet-field-label { font-size: 7px; font-weight: 800; color: var(--sheet-color); letter-spacing: 1px; text-transform: uppercase; }
+    .sheet-field-line { height: 18px; }
+
+    .sheet-tiers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 0 18px 10px; }
+    .sheet-tier { border-radius: 5px; padding: 6px 10px; display: flex; align-items: center; gap: 8px; border: 2px solid transparent; }
+    .tier-b { background: #fdf3e3; border-color: #cd7f32; }
+    .tier-s { background: #f2f4f6; border-color: #9e9e9e; }
+    .tier-g { background: #fffbe6; border-color: #f4a61d; }
+    .sheet-tier-medal { font-size: 20px; }
+    .sheet-tier-info { flex: 1; }
+    .sheet-tier-name { font-family: Georgia, serif; font-size: 12px; font-weight: 700; }
+    .tier-b .sheet-tier-name { color: #7d4e00; }
+    .tier-s .sheet-tier-name { color: #555; }
+    .tier-g .sheet-tier-name { color: #b07a00; }
+    .sheet-tier-sub { font-size: 8px; font-weight: 700; color: #888; }
+    .sheet-tier-reward { font-size: 8px; color: #333; font-weight: 600; margin-top: 1px; }
+    .sheet-tier-days { font-family: Georgia, serif; font-size: 18px; font-weight: 900; text-align: center; }
+    .tier-b .sheet-tier-days { color: #cd7f32; }
+    .tier-s .sheet-tier-days { color: #9e9e9e; }
+    .tier-g .sheet-tier-days { color: #f4a61d; }
+    .sheet-tier-days-lbl { font-size: 7px; font-weight: 800; color: #888; text-align: center; }
+
+    .sheet-honor {
+      margin: 0 18px 10px;
+      background: var(--sheet-honor-bg);
+      border: 1.5px solid var(--sheet-honor-border);
+      border-left: 4px solid var(--sheet-color);
+      border-radius: 4px;
+      padding: 5px 10px;
+      display: flex; gap: 8px; align-items: flex-start;
+    }
+    .sheet-honor-icon { font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+    .sheet-honor-title { font-size: 8.5px; font-weight: 900; color: var(--sheet-color); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px; }
+    .sheet-honor-body { font-size: 7.5px; color: #333; font-weight: 600; line-height: 1.5; }
+
+    .sheet-menu-section {
+      margin: 0 18px 10px;
+      background: var(--sheet-menu-bg);
+      border: 1.5px solid var(--sheet-menu-border);
+      border-radius: 5px;
+      padding: 6px 10px;
+    }
+    .sheet-menu-title { font-size: 9px; font-weight: 900; color: var(--sheet-color); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 5px; }
+    .sheet-menu-grid { display: grid; gap: 5px; }
+    .sheet-cat-title { font-size: 7.5px; font-weight: 900; color: var(--sheet-color); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+    .sheet-cat-items { font-size: 7px; color: #444; line-height: 1.5; font-weight: 600; }
+
+    .sheet-grid-section { padding: 0 18px 10px; }
+    .sheet-grid-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+    .sheet-grid-title { font-family: Georgia, serif; font-size: 12px; font-weight: 700; }
+    .sheet-grid-hint { font-size: 7px; color: #888; font-weight: 700; }
+
+    .sheet-month-block { margin-bottom: 5px; }
+    .sheet-month-label {
+      font-size: 8px; font-weight: 700; color: white;
+      background: var(--sheet-color);
+      display: inline-block;
+      padding: 1px 7px;
+      border-radius: 2px 2px 0 0;
+      letter-spacing: 1px; text-transform: uppercase;
+    }
+    .sheet-month-row {
+      display: grid;
+      gap: 2px;
+      background: var(--sheet-grid-bg);
+      padding: 3px;
+      border-radius: 0 4px 4px 4px;
+    }
+    .sheet-day-box {
+      height: 20px;
+      border: 1.5px solid var(--sheet-day-border);
+      border-radius: 2px;
+      background: white;
+      position: relative;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: flex-end;
+      padding-bottom: 1px;
+      font-size: 6px; font-weight: 800; color: #aaa;
+    }
+    .sheet-day-box.logged-day {
+      background: var(--sheet-color);
+      color: white;
+      border-color: var(--sheet-color);
+      font-size: 5.5px;
+    }
+    .sheet-day-milestone-30 { border-color: #cd7f32 !important; border-width: 2px !important; }
+    .sheet-day-milestone-60 { border-color: #9e9e9e !important; border-width: 2px !important; }
+    .sheet-day-milestone-90 { border-color: #f4a61d !important; border-width: 2.5px !important; }
+    .sheet-milestone-flag { position: absolute; top: -7px; right: -1px; font-size: 7px; line-height: 1; }
+
+    .sheet-sigs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 0 18px 10px; }
+    .sheet-sig { border-bottom: 1.5px solid #333; padding-bottom: 2px; }
+    .sheet-sig-label { font-size: 7px; font-weight: 800; color: #555; letter-spacing: 1px; text-transform: uppercase; }
+    .sheet-sig-line { height: 18px; }
+
+    .sheet-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      border-top: 2px solid var(--sheet-color);
+      padding: 5px 18px 14px;
+      font-size: 7px; color: #888; font-weight: 700;
+    }
+    .sheet-footer-center { font-family: Georgia, serif; font-size: 9px; font-weight: 600; color: var(--sheet-color); letter-spacing: 1px; }
+
+    @media print {
+      .print-controls, .topbar, .hero, .no-print { display: none !important; }
+      .print-sheet { box-shadow: none; page-break-after: always; max-width: 100%; border-radius: 0; margin: 0; }
+      body { background: white; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="topbar no-print">
+  <a class="topbar-brand" href="index.html">🏔️ <span>Pack 369</span></a>
+  <div class="topbar-nav">
+    <a href="index.html"><span>Home</span></a>
+    <a href="scout.html"><span>Scout Log</span></a>
+    <a href="leader.html"><span>Leader Dashboard</span></a>
+    <a href="print.html" class="active"><span>Print</span></a>
+  </div>
+</nav>
+
+<div class="hero no-print" style="background: linear-gradient(135deg, #2d3561, #1a1a2e);">
+  <div class="hero-inner">
+    <div class="hero-label">Pack 369 · Print View</div>
+    <h1>Print Trackers</h1>
+    <p>Generate print-ready tracking sheets for any scout, with logged days pre-filled.</p>
+  </div>
+</div>
+
+<div class="container no-print" style="margin-top: 2rem;">
+  <div class="print-controls">
+    <div>
+      <label>Scout</label>
+      <select id="scout-select" onchange="render()" style="min-width: 200px;"></select>
+    </div>
+    <div>
+      <label>Phase</label>
+      <select id="phase-select" onchange="render()">
+        <option value="all">All Three Phases</option>
+        <option value="physically-strong">Physically Strong</option>
+        <option value="mentally-awake">Mentally Awake</option>
+        <option value="morally-straight">Morally Straight</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" onclick="window.print()">🖨 Print / Save PDF</button>
+  </div>
+</div>
+
+<div id="sheets-area" style="padding: 1rem 1.5rem;"></div>
+
+<script src="js/app.js"></script>
+<script>
+  function init() {
+    const data = APP.getData();
+    const sel  = document.getElementById('scout-select');
+    if (!data) {
+      sel.innerHTML = '<option>No data — load scouts.json first</option>';
+      return;
+    }
+    sel.innerHTML = data.scouts.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    // Pre-select from URL param
+    const urlScout = new URLSearchParams(location.search).get('scout');
+    if (urlScout) sel.value = urlScout;
+    render();
+  }
+
+  function render() {
+    const data      = APP.getData();
+    if (!data) return;
+    const scoutId   = document.getElementById('scout-select').value;
+    const phaseVal  = document.getElementById('phase-select').value;
+    const scout     = APP.getScout(scoutId);
+    if (!scout) return;
+
+    const phaseIds = phaseVal === 'all'
+      ? Object.keys(APP.phases)
+      : [phaseVal];
+
+    document.getElementById('sheets-area').innerHTML = phaseIds.map(pid => buildSheet(scout, pid)).join('');
+  }
+
+  function buildSheet(scout, phaseId) {
+    const phase = APP.phases[phaseId];
+    const logs  = APP.getLogs(scout.id, phaseId);
+
+    // Color vars per phase
+    const colors = {
+      'physically-strong': { color:'#1a6b3c', honor:'#eef8f2', honorBorder:'#a8d9bc', menuBg:'#f8fdf9', menuBorder:'#c8e6d4', gridBg:'#e8f4ee', dayBorder:'#b5d9c5', hint:'S · E · B · NH', noteExtra: ' Numbers are goals — younger Scouts, do your best!' },
+      'mentally-awake':    { color:'#1a3f6b', honor:'#eef4fb', honorBorder:'#a8c8e8', menuBg:'#f4f8fd', menuBorder:'#b8d4ec', gridBg:'#dce8f5', dayBorder:'#a8c4e0', hint:'W · L · A · C · NH', noteExtra: '' },
+      'morally-straight':  { color:'#6b1a1a', honor:'#fdf0f0', honorBorder:'#e8b4b4', menuBg:'#fdf5f5', menuBorder:'#e8c4c4', gridBg:'#f5e0e0', dayBorder:'#dda8a8', hint:'G · C · S · Ch · NH', noteExtra: '' },
+    };
+    const c = colors[phaseId];
+
+    // Day grid
+    let dayNum = 1;
+    const monthGrids = phase.months.map((month, mi) => {
+      const days = phase.monthDays[mi];
+      let cells = '';
+      for (let d = 0; d < days; d++) {
+        const dn = dayNum++;
+        const logged = logs[dn];
+        let cls = 'sheet-day-box';
+        if (logged) cls += ' logged-day';
+        if (dn === 30) cls += ' sheet-day-milestone-30';
+        if (dn === 60) cls += ' sheet-day-milestone-60';
+        if (dn === 90) cls += ' sheet-day-milestone-90';
+        const flag = dn === 30 ? '🥉' : dn === 60 ? '🥈' : dn === 90 ? '🥇' : '';
+        cells += `<div class="${cls}">${flag ? `<div class="sheet-milestone-flag">${flag}</div>` : ''}${logged ? logged.cat : dn}</div>`;
+      }
+      return `<div class="sheet-month-block">
+        <div class="sheet-month-label">${month}</div>
+        <div class="sheet-month-row" style="grid-template-columns: repeat(${days}, 1fr);">${cells}</div>
+      </div>`;
+    }).join('');
+
+    const catCols = phase.categories.length;
+
+    return `<div class="print-sheet" style="
+      --sheet-color: ${c.color};
+      --sheet-honor-bg: ${c.honor};
+      --sheet-honor-border: ${c.honorBorder};
+      --sheet-menu-bg: ${c.menuBg};
+      --sheet-menu-border: ${c.menuBorder};
+      --sheet-grid-bg: ${c.gridBg};
+      --sheet-day-border: ${c.dayBorder};
+    ">
+      <div class="sheet-header">
+        <div class="sheet-badge">${phase.emoji}</div>
+        <div class="sheet-title-block">
+          <div class="sheet-pack">Pack 369 · New Hampshire · Cub Scouts</div>
+          <div class="sheet-title">90-Day <em>${phase.label}</em> Challenge</div>
+          <div class="sheet-sub">${phase.period} &nbsp;|&nbsp; One activity per day, parent-initialed &nbsp;|&nbsp; Turn in at ${phase.months[2]} Pack Meeting</div>
+        </div>
+      </div>
+      <div class="sheet-oath">"On my honor I will do my best to keep myself… ${phase.label.toUpperCase()}" — The Scout Oath</div>
+
+      <div class="sheet-fields">
+        <div class="sheet-field"><div class="sheet-field-label">Scout's Name</div><div class="sheet-field-line" style="font-size:11px; padding-top:3px;">${scout.name}</div></div>
+        <div class="sheet-field"><div class="sheet-field-label">Den / Rank</div><div class="sheet-field-line" style="font-size:11px; padding-top:3px;">${scout.den}</div></div>
+        <div class="sheet-field"><div class="sheet-field-label">Parent / Guardian</div><div class="sheet-field-line" style="font-size:11px; padding-top:3px;">${scout.parent || ''}</div></div>
+        <div class="sheet-field"><div class="sheet-field-label">Start Date</div><div class="sheet-field-line"></div></div>
+      </div>
+
+      <div class="sheet-tiers">
+        ${phase.tiers.map((t, i) => {
+          const cls = ['tier-b','tier-s','tier-g'][i];
+          return `<div class="sheet-tier ${cls}">
+            <div class="sheet-tier-medal">${t.emoji}</div>
+            <div class="sheet-tier-info">
+              <div class="sheet-tier-name">${t.name}</div>
+              <div class="sheet-tier-sub">${t.level} Level</div>
+              <div class="sheet-tier-reward">${t.reward}</div>
+            </div>
+            <div><div class="sheet-tier-days">${t.days}</div><div class="sheet-tier-days-lbl">DAYS</div></div>
+          </div>`;
+        }).join('')}
+      </div>
+
+      <div class="sheet-honor">
+        <div class="sheet-honor-icon">🤝</div>
+        <div>
+          <div class="sheet-honor-title">Scout's Honor Weekly Rule</div>
+          <div class="sheet-honor-body">Each week, complete at least one activity from <strong>every category</strong>. A Scout is trustworthy: your parent's initials are your pledge that you've kept this promise.${c.noteExtra}</div>
+        </div>
+      </div>
+
+      <div class="sheet-menu-section">
+        <div class="sheet-menu-title">📋 Daily Activity Menu — Pick One Per Day (one from each category per week)</div>
+        <div class="sheet-menu-grid" style="grid-template-columns: repeat(${catCols}, 1fr);">
+          ${phase.categories.map(cat => `
+            <div>
+              <div class="sheet-cat-title">${cat.emoji} ${cat.label}</div>
+              <div class="sheet-cat-items">${cat.items.join('<br>')}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+
+      <div class="sheet-grid-section">
+        <div class="sheet-grid-header">
+          <div class="sheet-grid-title">Activity Log — 90 Days</div>
+          <div class="sheet-grid-hint">Write category initial (${c.hint}) · Parent initials below · 🥉=Day 30 · 🥈=Day 60 · 🥇=Day 90</div>
+        </div>
+        ${monthGrids}
+      </div>
+
+      <div class="sheet-sigs">
+        <div class="sheet-sig"><div class="sheet-sig-label">Scout Signature</div><div class="sheet-sig-line"></div></div>
+        <div class="sheet-sig"><div class="sheet-sig-label">Parent / Guardian Signature</div><div class="sheet-sig-line"></div></div>
+        <div class="sheet-sig"><div class="sheet-sig-label">Den Leader Signature</div><div class="sheet-sig-line"></div></div>
+      </div>
+
+      <div class="sheet-footer">
+        <div>Pack 369 · New Hampshire<br>${phase.label} Phase · ${phase.period}</div>
+        <div class="sheet-footer-center">Be Prepared &nbsp;·&nbsp; Do Your Best</div>
+        <div style="text-align:right;">Turn in at ${phase.months[2]}<br>Pack Meeting for Award</div>
+      </div>
+    </div>`;
+  }
+
+  init();
+</script>
+</body>
+</html>

@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scout Log — Pack 369</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .scout-select-wrap { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 1.5rem; margin-bottom: 1.5rem; }
+    .scout-select-wrap h2 { font-family: var(--font-display); font-size: 1.2rem; margin-bottom: 1rem; }
+    .scout-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; margin-top: 1rem; }
+    .scout-btn {
+      padding: 12px;
+      border: 2px solid var(--stone);
+      border-radius: var(--radius);
+      background: var(--white);
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s;
+      font-family: var(--font-body);
+    }
+    .scout-btn:hover { border-color: var(--phase-color); background: var(--phase-bg); }
+    .scout-btn.selected { border-color: var(--phase-color); background: var(--phase-color); color: white; }
+    .scout-btn-name { font-weight: 700; font-size: 0.9rem; }
+    .scout-btn-den { font-size: 0.75rem; opacity: 0.7; margin-top: 2px; }
+
+    .log-panel { display: none; }
+    .log-panel.visible { display: block; }
+
+    .month-section { margin-bottom: 1.5rem; }
+    .month-label-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .month-name {
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+    .month-count { font-size: 0.78rem; color: var(--ghost); }
+
+    .category-menu { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .cat-card {
+      border: 2px solid var(--stone);
+      border-radius: var(--radius);
+      padding: 1rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .cat-card:hover { border-color: var(--phase-color); background: var(--phase-bg); }
+    .cat-card.selected { border-color: var(--phase-color); background: var(--phase-color); color: white; }
+    .cat-card-header { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.9rem; margin-bottom: 6px; }
+    .cat-card-items { font-size: 0.75rem; line-height: 1.6; opacity: 0.75; }
+    .cat-card.selected .cat-card-items { opacity: 0.9; }
+
+    .honor-box {
+      background: var(--phase-bg);
+      border: 1.5px solid var(--phase-color);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.85rem;
+    }
+    .honor-box strong { color: var(--phase-color); }
+
+    .week-status { margin-bottom: 1.5rem; }
+    .week-status-title { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--ghost); margin-bottom: 8px; }
+
+    .log-action-bar { display: flex; align-items: center; gap: 1rem; margin-top: 1rem; flex-wrap: wrap; }
+
+    .tier-progress-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+    .tier-progress-item { text-align: center; padding: 1rem; border-radius: var(--radius); border: 2px solid var(--stone); }
+    .tier-progress-item.reached { border-color: var(--gold); background: #fffbe6; }
+    .tier-progress-item .tier-name-sm { font-weight: 700; font-size: 0.8rem; margin-top: 4px; }
+    .tier-progress-item .tier-emoji { font-size: 1.5rem; }
+    .tier-progress-item .tier-days-sm { font-size: 0.72rem; color: var(--ghost); }
+
+    .no-data-msg { text-align: center; padding: 3rem; color: var(--ghost); }
+    .no-data-msg a { color: var(--green); }
+  </style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a class="topbar-brand" href="index.html">🏔️ <span>Pack 369</span></a>
+  <div class="topbar-nav">
+    <a href="index.html"><span>Home</span></a>
+    <a href="scout.html" class="active"><span>Scout Log</span></a>
+    <a href="leader.html"><span>Leader Dashboard</span></a>
+    <a href="print.html"><span>Print</span></a>
+  </div>
+</nav>
+
+<div class="hero" id="hero">
+  <div class="hero-inner">
+    <div class="hero-label" id="hero-label">Pack 369 · Scout Daily Log</div>
+    <h1 id="hero-title">Log Your Activity</h1>
+    <p id="hero-sub">Select your name and today's phase to get started.</p>
+  </div>
+</div>
+
+<div class="container" style="margin-top: 2rem;" id="main-content">
+  <div id="no-data-panel" style="display:none;">
+    <div class="no-data-msg">
+      <div style="font-size:3rem;">📂</div>
+      <h2 style="font-family: var(--font-display); margin: 1rem 0 0.5rem;">No Scout Data Loaded</h2>
+      <p>Please <a href="index.html">load a scouts.json file</a> to get started.</p>
+    </div>
+  </div>
+
+  <div id="app-panel">
+    <!-- Phase Selector -->
+    <div class="phase-tabs" id="phase-tabs"></div>
+
+    <!-- Scout Selector -->
+    <div class="scout-select-wrap">
+      <h2>Who's logging today?</h2>
+      <div class="scout-grid" id="scout-grid"></div>
+    </div>
+
+    <!-- Logging Panel -->
+    <div class="log-panel" id="log-panel">
+
+      <!-- Honor Rule -->
+      <div class="honor-box" id="honor-box">
+        🤝 <strong>Scout's Honor:</strong> Complete at least one activity from every category each week. Your parent's initials are your pledge.
+        <span id="honor-note" style="font-style: italic;"></span>
+      </div>
+
+      <!-- This Week's Category Coverage -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">This Week's Categories</div>
+          <span id="week-label" class="text-sm text-ghost"></span>
+        </div>
+        <div class="cat-pills" id="week-pills"></div>
+      </div>
+
+      <!-- Progress -->
+      <div class="card mt-2">
+        <div class="card-header">
+          <div class="card-title">Your Progress</div>
+          <span id="day-count-label" class="text-sm text-ghost"></span>
+        </div>
+        <div class="progress-wrap mb-2">
+          <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+        </div>
+        <div class="tier-progress-row" id="tier-row"></div>
+      </div>
+
+      <!-- Category Picker -->
+      <div class="card mt-2">
+        <div class="card-header">
+          <div class="card-title">Pick Today's Activity</div>
+          <span class="text-sm text-ghost">Select a category, then click a day</span>
+        </div>
+        <div class="category-menu" id="category-menu"></div>
+        <div class="log-action-bar">
+          <div class="text-sm text-ghost" id="selected-cat-label">← Select a category above, then tap a day below</div>
+        </div>
+      </div>
+
+      <!-- Day Grid -->
+      <div class="card mt-2">
+        <div class="card-header">
+          <div class="card-title">90-Day Activity Grid</div>
+          <span class="text-sm text-ghost">Tap a day to log / un-log</span>
+        </div>
+        <div id="day-grid-area"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Log Modal -->
+<div class="modal-overlay" id="log-modal">
+  <div class="modal">
+    <h2 id="modal-title">Log Activity</h2>
+    <p id="modal-body" style="margin-bottom: 1rem; font-size: 0.9rem;"></p>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="modal-confirm">Log It ✓</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+  let currentPhaseId = new URLSearchParams(location.search).get('phase') || 'physically-strong';
+  let currentScoutId = null;
+  let selectedCatId  = null;
+  let pendingDay     = null;
+
+  function init() {
+    const data = APP.getData();
+    if (!data) {
+      document.getElementById('no-data-panel').style.display = 'block';
+      document.getElementById('app-panel').style.display = 'none';
+      return;
+    }
+    renderPhaseTabs();
+    renderScoutGrid();
+    applyPhaseTheme();
+  }
+
+  function applyPhaseTheme() {
+    const phase = APP.phases[currentPhaseId];
+    APP.phaseCSSVar(currentPhaseId);
+    document.getElementById('hero').style.background =
+      `linear-gradient(135deg, var(--${phase.color}), var(--${phase.color}-l))`;
+    document.getElementById('hero-title').textContent = phase.label + ' Phase';
+    document.getElementById('hero-label').textContent = `Pack 369 · ${phase.period}`;
+    document.getElementById('hero-sub').textContent = phase.oathLine;
+  }
+
+  function renderPhaseTabs() {
+    const tabs = document.getElementById('phase-tabs');
+    tabs.innerHTML = '';
+    for (const [id, phase] of Object.entries(APP.phases)) {
+      const btn = document.createElement('button');
+      btn.className = 'phase-tab' + (id === currentPhaseId ? ` active-${id.split('-').map(w=>w[0]).join('').toLowerCase()}` : '');
+      btn.textContent = phase.emoji + ' ' + phase.label;
+      btn.onclick = () => { currentPhaseId = id; currentScoutId = null; applyPhaseTheme(); renderPhaseTabs(); renderScoutGrid(); document.getElementById('log-panel').classList.remove('visible'); };
+      tabs.appendChild(btn);
+    }
+  }
+
+  function renderScoutGrid() {
+    const data = APP.getData();
+    const grid = document.getElementById('scout-grid');
+    grid.innerHTML = '';
+    data.scouts.forEach(scout => {
+      const count = APP.getDayCount(scout.id, currentPhaseId);
+      const tier  = APP.getTier(scout.id, currentPhaseId);
+      const btn = document.createElement('button');
+      btn.className = 'scout-btn' + (scout.id === currentScoutId ? ' selected' : '');
+      btn.innerHTML = `<div class="scout-btn-name">${scout.name}</div>
+        <div class="scout-btn-den">${scout.den} · ${count}/90 days${tier ? ' · ' + tier.emoji : ''}</div>`;
+      btn.onclick = () => selectScout(scout.id);
+      grid.appendChild(btn);
+    });
+  }
+
+  function selectScout(id) {
+    currentScoutId = id;
+    selectedCatId  = null;
+    renderScoutGrid();
+    renderLogPanel();
+    document.getElementById('log-panel').classList.add('visible');
+    document.getElementById('log-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function renderLogPanel() {
+    if (!currentScoutId) return;
+    const phase  = APP.phases[currentPhaseId];
+    const logs   = APP.getLogs(currentScoutId, currentPhaseId);
+    const count  = Object.keys(logs).length;
+
+    // Progress
+    document.getElementById('day-count-label').textContent = `${count} of 90 days logged`;
+    const pf = document.getElementById('progress-fill');
+    pf.style.width = Math.min(100, (count / 90) * 100) + '%';
+    pf.className   = `progress-fill ${APP.progressColor(currentPhaseId)}`;
+
+    // Tier row
+    const tierRow = document.getElementById('tier-row');
+    tierRow.innerHTML = phase.tiers.map(t => {
+      const reached = count >= t.days;
+      return `<div class="tier-progress-item ${reached ? 'reached' : ''}">
+        <div class="tier-emoji">${t.emoji}</div>
+        <div class="tier-name-sm">${t.name}</div>
+        <div class="tier-days-sm">${t.days} days${reached ? ' ✓' : ` · ${t.days - count} to go`}</div>
+      </div>`;
+    }).join('');
+
+    // Week coverage (estimate current week from max day logged)
+    const maxDay   = count > 0 ? Math.max(...Object.keys(logs).map(Number)) : 0;
+    const weekNum  = Math.ceil((maxDay || 1) / 7);
+    const coverage = APP.getWeekCoverage(currentScoutId, currentPhaseId, weekNum);
+    document.getElementById('week-label').textContent = `Week ${weekNum}`;
+    const pills = document.getElementById('week-pills');
+    pills.innerHTML = phase.categories.map(c =>
+      `<span class="cat-pill ${coverage.has(c.id) ? 'done' : ''}">${c.emoji} ${c.label}</span>`
+    ).join('');
+
+    const missing = phase.categories.filter(c => !coverage.has(c.id));
+    document.getElementById('honor-note').textContent = missing.length
+      ? ` Still needed this week: ${missing.map(c => c.label).join(', ')}.`
+      : ' All categories covered this week — great work!';
+
+    // Category menu
+    const menu = document.getElementById('category-menu');
+    menu.innerHTML = phase.categories.map(c => `
+      <div class="cat-card ${selectedCatId === c.id ? 'selected' : ''}" onclick="selectCat('${c.id}')">
+        <div class="cat-card-header">${c.emoji} ${c.label}</div>
+        <div class="cat-card-items">${c.items.join('<br>')}</div>
+      </div>`).join('');
+
+    // Day grid
+    renderDayGrid(logs);
+  }
+
+  function renderDayGrid(logs) {
+    const phase = APP.phases[currentPhaseId];
+    const area  = document.getElementById('day-grid-area');
+    area.innerHTML = '';
+    let dayNum = 1;
+    phase.months.forEach((month, mi) => {
+      const days = phase.monthDays[mi];
+      const section = document.createElement('div');
+      section.className = 'month-section';
+      const logged = Object.values(logs).length;
+      section.innerHTML = `<div class="month-label-bar">
+        <div class="month-name">${month}</div>
+        <div class="month-count">${days} days</div>
+      </div>`;
+      const grid = document.createElement('div');
+      grid.className = `day-grid day-grid-${days}`;
+      for (let d = 0; d < days; d++, dayNum++) {
+        const dn = dayNum;
+        const cell = document.createElement('div');
+        cell.className = 'day-cell';
+        if (dn === 30) cell.classList.add('milestone-30');
+        if (dn === 60) cell.classList.add('milestone-60');
+        if (dn === 90) cell.classList.add('milestone-90');
+        if (logs[dn]) {
+          cell.classList.add('logged');
+          cell.textContent = logs[dn].cat;
+          cell.title = `Day ${dn} — ${logs[dn].cat}`;
+        } else {
+          cell.title = `Day ${dn}`;
+        }
+        cell.onclick = () => handleDayClick(dn);
+        grid.appendChild(cell);
+      }
+      section.appendChild(grid);
+      area.appendChild(section);
+    });
+  }
+
+  function selectCat(id) {
+    selectedCatId = id;
+    const phase = APP.phases[currentPhaseId];
+    const cat   = phase.categories.find(c => c.id === id);
+    document.getElementById('selected-cat-label').textContent = `Selected: ${cat.emoji} ${cat.label} — now tap a day in the grid`;
+    renderLogPanel();
+  }
+
+  function handleDayClick(dayNum) {
+    const logs = APP.getLogs(currentScoutId, currentPhaseId);
+    if (logs[dayNum]) {
+      // Already logged — toggle off
+      APP.logDay(currentScoutId, currentPhaseId, dayNum, null);
+      renderLogPanel();
+      renderScoutGrid();
+      return;
+    }
+    if (!selectedCatId) {
+      alert('Please select a category first.');
+      return;
+    }
+    pendingDay = dayNum;
+    const phase = APP.phases[currentPhaseId];
+    const cat   = phase.categories.find(c => c.id === selectedCatId);
+    document.getElementById('modal-title').textContent = `Log Day ${dayNum}`;
+    document.getElementById('modal-body').innerHTML = `
+      Log <strong>${cat.emoji} ${cat.label}</strong> for Day ${dayNum} of the ${phase.label} phase?<br>
+      <span style="font-size:0.82rem; color: var(--ghost);">Tip: make sure a parent initials your paper sheet too!</span>`;
+    document.getElementById('modal-confirm').onclick = confirmLog;
+    document.getElementById('log-modal').classList.add('open');
+  }
+
+  function confirmLog() {
+    APP.logDay(currentScoutId, currentPhaseId, pendingDay, selectedCatId);
+    closeModal();
+    renderLogPanel();
+    renderScoutGrid();
+  }
+
+  function closeModal() {
+    document.getElementById('log-modal').classList.remove('open');
+    pendingDay = null;
+  }
+
+  document.getElementById('log-modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('log-modal')) closeModal();
+  });
+
+  init();
+</script>
+</body>
+</html>

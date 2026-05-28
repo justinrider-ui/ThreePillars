@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leader Dashboard — Pack 369</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .leader-grid { display: grid; grid-template-columns: 280px 1fr; gap: 1.5rem; align-items: start; }
+    @media (max-width: 700px) { .leader-grid { grid-template-columns: 1fr; } }
+
+    .sidebar { position: sticky; top: 68px; }
+    .sidebar .card { margin-bottom: 1rem; }
+
+    .scout-row-name { font-weight: 700; }
+    .scout-row-den  { font-size: 0.78rem; color: var(--ghost); }
+
+    .phase-bar-wrap { display: flex; flex-direction: column; gap: 4px; }
+    .phase-bar-row  { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; }
+    .phase-bar-label { width: 14px; text-align: center; }
+    .phase-bar-track { flex: 1; height: 6px; background: var(--stone); border-radius: 99px; overflow: hidden; }
+    .phase-bar-fill  { height: 100%; border-radius: 99px; }
+    .fill-green { background: var(--green); }
+    .fill-blue  { background: var(--blue); }
+    .fill-red   { background: var(--red); }
+    .phase-bar-count { width: 36px; text-align: right; color: var(--ghost); }
+
+    .flag-behind { color: #c0392b; font-size: 0.75rem; font-weight: 700; }
+    .flag-ok     { color: var(--green); font-size: 0.75rem; font-weight: 700; }
+
+    .add-scout-form { display: grid; gap: 10px; }
+
+    .detail-panel { display: none; }
+    .detail-panel.open { display: block; }
+
+    .overview-phases { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+    .ov-phase { border-radius: var(--radius); padding: 1rem; color: white; text-align: center; }
+    .ov-phase.green { background: linear-gradient(135deg, var(--green), var(--green-l)); }
+    .ov-phase.blue  { background: linear-gradient(135deg, var(--blue),  var(--blue-l)); }
+    .ov-phase.red   { background: linear-gradient(135deg, var(--red),   var(--red-l)); }
+    .ov-phase-num { font-family: var(--font-display); font-size: 2rem; font-weight: 900; }
+    .ov-phase-label { font-size: 0.78rem; opacity: 0.85; }
+  </style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a class="topbar-brand" href="index.html">🏔️ <span>Pack 369</span></a>
+  <div class="topbar-nav">
+    <a href="index.html"><span>Home</span></a>
+    <a href="scout.html"><span>Scout Log</span></a>
+    <a href="leader.html" class="active"><span>Leader Dashboard</span></a>
+    <a href="print.html"><span>Print</span></a>
+  </div>
+</nav>
+
+<div class="hero" style="background: linear-gradient(135deg, var(--ink) 0%, #2d3561 100%);">
+  <div class="hero-inner">
+    <div class="hero-label">Pack 369 · Leader View</div>
+    <h1>Pack Dashboard</h1>
+    <p>Monitor all scouts across all three phases, manage the roster, and export data.</p>
+  </div>
+</div>
+
+<div class="container-wide" style="margin-top: 2rem;">
+
+  <div id="no-data-panel" style="display:none; text-align:center; padding: 3rem;">
+    <div style="font-size:3rem;">📂</div>
+    <h2 style="font-family: var(--font-display); margin: 1rem 0 0.5rem;">No Scout Data Loaded</h2>
+    <p>Please <a href="index.html" style="color:var(--green);">load a scouts.json file</a> on the home page first.</p>
+  </div>
+
+  <div id="app-panel">
+    <!-- Pack Overview -->
+    <div class="overview-phases" id="overview-phases"></div>
+
+    <div class="leader-grid">
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <!-- Data Management -->
+        <div class="card">
+          <div class="card-header"><div class="card-title">Data</div></div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <button class="btn btn-primary w-full" onclick="APP.exportJSON()">⬇ Export scouts.json</button>
+            <label class="btn btn-ghost w-full" style="justify-content: center; cursor:pointer;">
+              ⬆ Import scouts.json
+              <input type="file" accept=".json" style="display:none" onchange="importFile(this)">
+            </label>
+          </div>
+          <p class="text-sm text-ghost mt-2">Export saves all progress. Share the file with scouts to update their devices.</p>
+        </div>
+
+        <!-- Add Scout -->
+        <div class="card">
+          <div class="card-header"><div class="card-title">Add Scout</div></div>
+          <div class="add-scout-form">
+            <div><label>Name</label><input type="text" id="new-name" placeholder="First Last"></div>
+            <div><label>Den</label><input type="text" id="new-den" placeholder="Wolf Den"></div>
+            <div><label>Rank</label><input type="text" id="new-rank" placeholder="Wolf"></div>
+            <div><label>Parent</label><input type="text" id="new-parent" placeholder="Parent Name"></div>
+            <button class="btn btn-primary" onclick="addScout()">+ Add Scout</button>
+          </div>
+        </div>
+
+        <!-- Phase Filter -->
+        <div class="card">
+          <div class="card-header"><div class="card-title">Filter by Phase</div></div>
+          <div id="phase-filter" style="display: flex; flex-direction: column; gap: 6px;"></div>
+        </div>
+      </div>
+
+      <!-- Main Table -->
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">All Scouts</div>
+            <span id="scout-count" class="text-sm text-ghost"></span>
+          </div>
+          <table class="scout-table" id="scout-table">
+            <thead>
+              <tr>
+                <th>Scout</th>
+                <th>Phys. Strong</th>
+                <th>Mentally Awake</th>
+                <th>Morally Straight</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="scout-tbody"></tbody>
+          </table>
+        </div>
+
+        <!-- Scout Detail -->
+        <div class="card mt-2 detail-panel" id="detail-panel">
+          <div class="card-header">
+            <div class="card-title" id="detail-name"></div>
+            <button class="btn btn-ghost btn-sm" onclick="closeDetail()">✕ Close</button>
+          </div>
+          <div id="detail-content"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+  let filterPhase = null;
+
+  function init() {
+    const data = APP.getData();
+    if (!data) {
+      document.getElementById('no-data-panel').style.display = 'block';
+      document.getElementById('app-panel').style.display = 'none';
+      return;
+    }
+    renderOverview();
+    renderPhaseFilter();
+    renderTable();
+  }
+
+  function renderOverview() {
+    const data   = APP.getData();
+    const phases = Object.values(APP.phases);
+    const el     = document.getElementById('overview-phases');
+    el.innerHTML = phases.map(phase => {
+      const goldCount = data.scouts.filter(s => APP.getDayCount(s.id, phase.id) >= 90).length;
+      const anyCount  = data.scouts.filter(s => APP.getDayCount(s.id, phase.id) > 0).length;
+      return `<div class="ov-phase ${phase.color}">
+        <div class="ov-phase-num">${goldCount}</div>
+        <div class="ov-phase-label">${phase.emoji} ${phase.label}<br>${anyCount} active scouts</div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderPhaseFilter() {
+    const el = document.getElementById('phase-filter');
+    el.innerHTML = `<button class="btn btn-sm ${!filterPhase ? 'btn-primary' : 'btn-ghost'} w-full" onclick="setFilter(null)">All Phases</button>` +
+      Object.values(APP.phases).map(p =>
+        `<button class="btn btn-sm ${filterPhase === p.id ? 'btn-primary' : 'btn-ghost'} w-full"
+          style="--phase-color: var(--${p.color})" onclick="setFilter('${p.id}')">${p.emoji} ${p.label}</button>`
+      ).join('');
+  }
+
+  function setFilter(id) { filterPhase = id; renderPhaseFilter(); renderTable(); }
+
+  function renderTable() {
+    const data   = APP.getData();
+    const tbody  = document.getElementById('scout-tbody');
+    const phases = Object.values(APP.phases);
+    document.getElementById('scout-count').textContent = `${data.scouts.length} scouts`;
+
+    tbody.innerHTML = data.scouts.map(scout => {
+      const cells = phases.map(phase => {
+        const count = APP.getDayCount(scout.id, phase.id);
+        const pct   = Math.min(100, (count / 90) * 100);
+        const tier  = APP.getTier(scout.id, phase.id);
+        return `<td>
+          <div class="phase-bar-wrap">
+            <div class="phase-bar-row">
+              <div class="phase-bar-track"><div class="phase-bar-fill fill-${phase.color}" style="width:${pct}%"></div></div>
+              <div class="phase-bar-count">${count}/90</div>
+            </div>
+            ${tier ? `<div><span class="tier-badge tier-${tier.level.toLowerCase()}">${tier.emoji} ${tier.name}</span></div>` : ''}
+          </div>
+        </td>`;
+      }).join('');
+
+      // Simple flag: any phase where they have >0 days but <30 with low weekly coverage
+      const totalDays = phases.reduce((s, p) => s + APP.getDayCount(scout.id, p.id), 0);
+      const status = totalDays === 0
+        ? `<span class="text-ghost text-sm">Not started</span>`
+        : `<span class="flag-ok">Active</span>`;
+
+      return `<tr>
+        <td><div class="scout-row-name">${scout.name}</div><div class="scout-row-den">${scout.den} · ${scout.rank}</div></td>
+        ${cells}
+        <td>${status}</td>
+        <td><button class="btn btn-ghost btn-sm" onclick="showDetail('${scout.id}')">Detail</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  function showDetail(scoutId) {
+    const scout  = APP.getScout(scoutId);
+    const phases = Object.values(APP.phases);
+    document.getElementById('detail-name').textContent = `${scout.name} — ${scout.den}`;
+
+    let html = `<div class="grid-3">`;
+    phases.forEach(phase => {
+      const count = APP.getDayCount(scout.id, phase.id);
+      const tier  = APP.getTier(scout.id, phase.id);
+      const pct   = Math.min(100, (count / 90) * 100);
+      html += `<div style="border: 2px solid var(--stone); border-radius: var(--radius); padding: 1rem;">
+        <div style="font-weight:700; margin-bottom:6px;">${phase.emoji} ${phase.label}</div>
+        <div class="progress-wrap mb-1"><div class="progress-fill fill-${phase.color}" style="width:${pct}%"></div></div>
+        <div class="text-sm text-ghost">${count} / 90 days</div>
+        ${tier ? `<div class="mt-1"><span class="tier-badge tier-${tier.level.toLowerCase()}">${tier.emoji} ${tier.name}</span></div>` : '<div class="text-sm text-ghost mt-1">No tier yet</div>'}
+      </div>`;
+    });
+    html += `</div>`;
+    html += `<div class="mt-2 flex gap-1">
+      <a href="print.html?scout=${scoutId}" class="btn btn-ghost btn-sm">🖨 Print Trackers</a>
+      <button class="btn btn-danger btn-sm" onclick="removeScout('${scoutId}')">Remove Scout</button>
+    </div>`;
+
+    document.getElementById('detail-content').innerHTML = html;
+    document.getElementById('detail-panel').classList.add('open');
+    document.getElementById('detail-panel').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function closeDetail() { document.getElementById('detail-panel').classList.remove('open'); }
+
+  function addScout() {
+    const name   = document.getElementById('new-name').value.trim();
+    const den    = document.getElementById('new-den').value.trim();
+    const rank   = document.getElementById('new-rank').value.trim();
+    const parent = document.getElementById('new-parent').value.trim();
+    if (!name) { alert('Please enter a scout name.'); return; }
+    const data = APP.getData();
+    data.scouts.push({ id: 'scout-' + Date.now(), name, den, rank, parent, logs: {} });
+    APP.saveData(data);
+    ['new-name','new-den','new-rank','new-parent'].forEach(id => document.getElementById(id).value = '');
+    renderOverview(); renderTable();
+  }
+
+  function removeScout(id) {
+    if (!confirm('Remove this scout? All their logged data will be deleted.')) return;
+    const data = APP.getData();
+    data.scouts = data.scouts.filter(s => s.id !== id);
+    APP.saveData(data);
+    closeDetail(); renderOverview(); renderTable();
+  }
+
+  function importFile(input) {
+    if (!input.files[0]) return;
+    APP.importJSON(input.files[0], (err) => {
+      if (err) { alert('Could not read that file.'); return; }
+      renderOverview(); renderTable();
+    });
+  }
+
+  init();
+</script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+{
+  "pack": "Pack 369",
+  "location": "New Hampshire",
+  "season": "2026-2027",
+  "phases": {
+    "physically-strong": { "label": "Physically Strong", "months": "Sept–Nov", "days": 90 },
+    "mentally-awake":    { "label": "Mentally Awake",    "months": "Dec–Feb",  "days": 90 },
+    "morally-straight":  { "label": "Morally Straight",  "months": "Mar–May",  "days": 90 }
+  },
+  "scouts": [
+    {
+      "id": "scout-001",
+      "name": "Alex Johnson",
+      "den": "Wolf Den",
+      "rank": "Wolf",
+      "parent": "Sarah Johnson",
+      "logs": {}
+    },
+    {
+      "id": "scout-002",
+      "name": "Bailey Smith",
+      "den": "Bear Den",
+      "rank": "Bear",
+      "parent": "Tom Smith",
+      "logs": {}
+    },
+    {
+      "id": "scout-003",
+      "name": "Casey Williams",
+      "den": "Wolf Den",
+      "rank": "Wolf",
+      "parent": "Pat Williams",
+      "logs": {}
+    }
+  ]
+}
