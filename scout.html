@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scout Log — Pack 369</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .scout-header-bar {
+      background: var(--white);
+      border-bottom: 2px solid var(--stone);
+      padding: 10px 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.88rem;
+    }
+    .scout-name-badge { font-weight: 700; display: flex; align-items: center; gap: 6px; }
+    .scout-name-badge span { color: var(--ghost); font-weight: 400; }
+
+    .category-menu { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; }
+    .cat-card { border: 2px solid var(--stone); border-radius: var(--radius); padding: 0.9rem; cursor: pointer; transition: all 0.15s; }
+    .cat-card:hover { border-color: var(--phase-color); background: var(--phase-bg); }
+    .cat-card.selected { border-color: var(--phase-color); background: var(--phase-color); color: white; }
+    .cat-card-header { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.88rem; margin-bottom: 5px; }
+    .cat-card-items { font-size: 0.73rem; line-height: 1.6; opacity: 0.75; }
+    .cat-card.selected .cat-card-items { opacity: 0.9; }
+
+    .honor-box { background: var(--phase-bg); border: 1.5px solid var(--phase-color); border-radius: var(--radius); padding: 0.9rem 1.1rem; margin-bottom: 1.25rem; font-size: 0.84rem; }
+
+    .month-section { margin-bottom: 1.25rem; }
+    .month-label-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+    .month-name { font-family: var(--font-display); font-size: 0.95rem; font-weight: 700; }
+
+    .tier-progress-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+    .tier-item { text-align: center; padding: 0.75rem; border-radius: var(--radius); border: 2px solid var(--stone); }
+    .tier-item.reached { border-color: var(--gold); background: #fffbe6; }
+    .tier-item-emoji { font-size: 1.4rem; }
+    .tier-item-name  { font-weight: 700; font-size: 0.78rem; margin-top: 3px; }
+    .tier-item-days  { font-size: 0.7rem; color: var(--ghost); }
+
+    .log-hint { font-size: 0.82rem; color: var(--ghost); font-style: italic; }
+  </style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a class="topbar-brand" href="scout.html">🏔️ <span>Pack 369</span></a>
+  <div class="topbar-nav">
+    <a href="print.html"><span>Print</span></a>
+    <button class="btn btn-ghost btn-sm" onclick="signOut()" style="color:rgba(255,255,255,0.75); border-color:rgba(255,255,255,0.3);">Sign Out</button>
+  </div>
+</nav>
+
+<!-- Scout info bar -->
+<div class="scout-header-bar" id="scout-bar">
+  <div class="scout-name-badge" id="scout-name-display">Loading…</div>
+  <div class="text-sm text-ghost" id="scout-den-display"></div>
+</div>
+
+<div class="hero" id="hero">
+  <div class="hero-inner">
+    <div class="hero-label" id="hero-label">Pack 369</div>
+    <h1 id="hero-title">Scout Challenge</h1>
+    <p id="hero-sub">Loading your tracker…</p>
+  </div>
+</div>
+
+<div class="container" style="margin-top: 1.5rem;" id="main">
+
+  <!-- Phase Tabs -->
+  <div class="phase-tabs" id="phase-tabs"></div>
+
+  <!-- Honor Rule -->
+  <div class="honor-box" id="honor-box">
+    🤝 <strong>Scout's Honor:</strong> Complete at least one activity from every category each week.
+    <span id="honor-note"></span>
+  </div>
+
+  <!-- Week Categories -->
+  <div class="card mb-2">
+    <div class="card-header">
+      <div class="card-title">This Week's Categories</div>
+      <span id="week-label" class="text-sm text-ghost"></span>
+    </div>
+    <div class="cat-pills" id="week-pills"></div>
+  </div>
+
+  <!-- Progress -->
+  <div class="card mb-2">
+    <div class="card-header">
+      <div class="card-title">Progress</div>
+      <span id="day-count-label" class="text-sm text-ghost"></span>
+    </div>
+    <div class="progress-wrap mb-2">
+      <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+    <div class="tier-progress-row" id="tier-row"></div>
+  </div>
+
+  <!-- Category Picker -->
+  <div class="card mb-2">
+    <div class="card-header">
+      <div class="card-title">Pick Today's Activity</div>
+      <span class="log-hint" id="selected-cat-label">Select a category, then tap a day</span>
+    </div>
+    <div class="category-menu" id="category-menu"></div>
+  </div>
+
+  <!-- Day Grid -->
+  <div class="card mb-2">
+    <div class="card-header">
+      <div class="card-title">90-Day Activity Grid</div>
+      <span class="text-sm text-ghost">Tap a logged day to remove it</span>
+    </div>
+    <div id="day-grid-area"></div>
+  </div>
+
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal-overlay" id="log-modal">
+  <div class="modal">
+    <h2 id="modal-title">Log Activity</h2>
+    <p id="modal-body" style="margin-bottom:1rem; font-size:0.9rem;"></p>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="modal-confirm">Log It ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- Remove Modal -->
+<div class="modal-overlay" id="remove-modal">
+  <div class="modal">
+    <h2>Remove Entry?</h2>
+    <p id="remove-body" style="margin-bottom:1rem; font-size:0.9rem;"></p>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeRemoveModal()">Keep It</button>
+      <button class="btn btn-danger btn-sm" id="remove-confirm">Remove</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+  SESSION.requireAuth();
+  if (SESSION.isLeader()) location.href = 'leader.html';
+
+  const scoutId = SESSION.scoutId();
+  let scout     = null;
+  let allLogs   = [];
+  let currentPhaseId = 'physically-strong';
+  let selectedCatId  = null;
+  let pendingDay     = null;
+  let pendingRemoveDay = null;
+
+  async function init() {
+    try {
+      const scouts = await sb.select('scouts', `id=eq.${scoutId}&select=id,name,den,rank,parent`);
+      if (!scouts || scouts.length === 0) { SESSION.clear(); location.href = 'index.html'; return; }
+      scout = scouts[0];
+      document.getElementById('scout-name-display').innerHTML = `🧒 ${scout.name}`;
+      document.getElementById('scout-den-display').textContent = `${scout.den} · ${scout.rank}`;
+
+      const logs = await sb.select('logs', `scout_id=eq.${scoutId}&select=phase,day_num,category,logged_at`);
+      allLogs = logs || [];
+
+      renderPhaseTabs();
+      applyPhase();
+    } catch(err) {
+      document.getElementById('main').innerHTML = `<div class="alert alert-warn">Connection error: ${err.message}</div>`;
+    }
+  }
+
+  function applyPhase() {
+    const phase = APP.phases[currentPhaseId];
+    APP.phaseCSSVar(currentPhaseId);
+    const hero = document.getElementById('hero');
+    hero.style.background = `linear-gradient(135deg, var(--${phase.color}), var(--${phase.color}-l))`;
+    document.getElementById('hero-title').textContent = phase.label + ' Phase';
+    document.getElementById('hero-label').textContent = `Pack 369 · ${phase.period}`;
+    document.getElementById('hero-sub').textContent   = phase.oathLine;
+    selectedCatId = null;
+    document.getElementById('selected-cat-label').textContent = 'Select a category, then tap a day';
+    renderAll();
+  }
+
+  function renderPhaseTabs() {
+    const tabs = document.getElementById('phase-tabs');
+    tabs.innerHTML = '';
+    for (const [id, phase] of Object.entries(APP.phases)) {
+      const btn = document.createElement('button');
+      const activeKey = id === 'physically-strong' ? 'ps' : id === 'mentally-awake' ? 'ma' : 'ms';
+      btn.className = 'phase-tab' + (id === currentPhaseId ? ` active-${activeKey}` : '');
+      btn.textContent = phase.emoji + ' ' + phase.label;
+      btn.onclick = () => { currentPhaseId = id; renderPhaseTabs(); applyPhase(); };
+      tabs.appendChild(btn);
+    }
+  }
+
+  function renderAll() {
+    const phase   = APP.phases[currentPhaseId];
+    const logs    = APP.indexLogs(allLogs, currentPhaseId);
+    const count   = Object.keys(logs).length;
+
+    // Progress
+    document.getElementById('day-count-label').textContent = `${count} of 90 days logged`;
+    const pf = document.getElementById('progress-fill');
+    pf.style.width = Math.min(100, (count/90)*100) + '%';
+    pf.className   = `progress-fill ${APP.progressColor(currentPhaseId)}`;
+
+    // Tiers
+    document.getElementById('tier-row').innerHTML = phase.tiers.map(t => {
+      const reached = count >= t.days;
+      return `<div class="tier-item ${reached ? 'reached' : ''}">
+        <div class="tier-item-emoji">${t.emoji}</div>
+        <div class="tier-item-name">${t.name}</div>
+        <div class="tier-item-days">${reached ? '✓ Earned' : `${t.days - count} days to go`}</div>
+      </div>`;
+    }).join('');
+
+    // Week coverage
+    const maxDay  = count > 0 ? Math.max(...Object.keys(logs).map(Number)) : 0;
+    const weekNum = Math.ceil((maxDay || 1) / 7);
+    const start   = (weekNum - 1) * 7 + 1;
+    const end     = Math.min(weekNum * 7, 90);
+    const done    = new Set();
+    for (let d = start; d <= end; d++) { if (logs[d]) done.add(logs[d].cat); }
+    document.getElementById('week-label').textContent = `Week ${weekNum}`;
+    document.getElementById('week-pills').innerHTML = phase.categories.map(c =>
+      `<span class="cat-pill ${done.has(c.id) ? 'done' : ''}">${c.emoji} ${c.label}</span>`
+    ).join('');
+    const missing = phase.categories.filter(c => !done.has(c.id));
+    document.getElementById('honor-note').textContent = missing.length
+      ? ` Still needed this week: ${missing.map(c => c.label).join(', ')}.`
+      : ' All categories covered this week — great work! 🎉';
+
+    // Category menu
+    document.getElementById('category-menu').innerHTML = phase.categories.map(c => `
+      <div class="cat-card ${selectedCatId === c.id ? 'selected' : ''}" onclick="selectCat('${c.id}')">
+        <div class="cat-card-header">${c.emoji} ${c.label}</div>
+        <div class="cat-card-items">${c.items.join('<br>')}</div>
+      </div>`).join('');
+
+    // Day grid
+    renderGrid(logs);
+  }
+
+  function renderGrid(logs) {
+    const phase = APP.phases[currentPhaseId];
+    const area  = document.getElementById('day-grid-area');
+    area.innerHTML = '';
+    let dayNum = 1;
+    phase.months.forEach((month, mi) => {
+      const days = phase.monthDays[mi];
+      const section = document.createElement('div');
+      section.className = 'month-section';
+      section.innerHTML = `<div class="month-label-bar"><div class="month-name">${month}</div><div class="text-sm text-ghost">${days} days</div></div>`;
+      const grid = document.createElement('div');
+      grid.className = `day-grid day-grid-${days}`;
+      for (let d = 0; d < days; d++, dayNum++) {
+        const dn   = dayNum;
+        const cell = document.createElement('div');
+        cell.className = 'day-cell';
+        if (dn === 30) cell.classList.add('milestone-30');
+        if (dn === 60) cell.classList.add('milestone-60');
+        if (dn === 90) cell.classList.add('milestone-90');
+        if (logs[dn]) {
+          cell.classList.add('logged');
+          cell.textContent = logs[dn].cat;
+          cell.title = `Day ${dn} — ${logs[dn].cat} (tap to remove)`;
+        } else {
+          cell.title = `Day ${dn}`;
+        }
+        cell.onclick = () => logs[dn] ? handleRemove(dn, logs[dn].cat) : handleLog(dn);
+        grid.appendChild(cell);
+      }
+      section.appendChild(grid);
+      area.appendChild(section);
+    });
+  }
+
+  function selectCat(id) {
+    selectedCatId = id;
+    const cat = APP.phases[currentPhaseId].categories.find(c => c.id === id);
+    document.getElementById('selected-cat-label').textContent = `Selected: ${cat.emoji} ${cat.label} — now tap a day below`;
+    renderAll();
+  }
+
+  function handleLog(dayNum) {
+    if (!selectedCatId) { alert('Please select a category first.'); return; }
+    pendingDay = dayNum;
+    const cat  = APP.phases[currentPhaseId].categories.find(c => c.id === selectedCatId);
+    document.getElementById('modal-title').textContent = `Log Day ${dayNum}`;
+    document.getElementById('modal-body').innerHTML =
+      `Log <strong>${cat.emoji} ${cat.label}</strong> for Day ${dayNum} of the ${APP.phases[currentPhaseId].label} phase?<br>
+       <span style="font-size:0.82rem; color:var(--ghost);">Remember to initial the paper sheet too!</span>`;
+    document.getElementById('modal-confirm').onclick = confirmLog;
+    document.getElementById('log-modal').classList.add('open');
+  }
+
+  async function confirmLog() {
+    closeModal();
+    try {
+      await sb.upsert('logs', {
+        scout_id: scoutId,
+        phase:    currentPhaseId,
+        day_num:  pendingDay,
+        category: selectedCatId,
+        logged_at: new Date().toISOString(),
+      });
+      allLogs = allLogs.filter(l => !(l.phase === currentPhaseId && l.day_num === pendingDay));
+      allLogs.push({ phase: currentPhaseId, day_num: pendingDay, category: selectedCatId, logged_at: new Date().toISOString() });
+      renderAll();
+    } catch(err) { alert('Could not save. Check your connection and try again.'); }
+  }
+
+  function handleRemove(dayNum, cat) {
+    pendingRemoveDay = dayNum;
+    document.getElementById('remove-body').innerHTML =
+      `Remove the <strong>${cat}</strong> entry for Day ${dayNum}?`;
+    document.getElementById('remove-confirm').onclick = confirmRemove;
+    document.getElementById('remove-modal').classList.add('open');
+  }
+
+  async function confirmRemove() {
+    closeRemoveModal();
+    try {
+      await sb.delete('logs', `scout_id=eq.${scoutId}&phase=eq.${currentPhaseId}&day_num=eq.${pendingRemoveDay}`);
+      allLogs = allLogs.filter(l => !(l.phase === currentPhaseId && l.day_num === pendingRemoveDay));
+      renderAll();
+    } catch(err) { alert('Could not remove. Check your connection.'); }
+  }
+
+  function closeModal()       { document.getElementById('log-modal').classList.remove('open'); }
+  function closeRemoveModal() { document.getElementById('remove-modal').classList.remove('open'); }
+  function signOut()          { SESSION.clear(); location.href = 'index.html'; }
+
+  document.getElementById('log-modal').addEventListener('click', e => { if (e.target === document.getElementById('log-modal')) closeModal(); });
+  document.getElementById('remove-modal').addEventListener('click', e => { if (e.target === document.getElementById('remove-modal')) closeRemoveModal(); });
+
+  init();
+</script>
+</body>
+</html>

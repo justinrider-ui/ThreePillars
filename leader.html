@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leader Dashboard — Pack 369</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .leader-layout { display: grid; grid-template-columns: 300px 1fr; gap: 1.5rem; align-items: start; }
+    @media (max-width: 768px) { .leader-layout { grid-template-columns: 1fr; } }
+    .sidebar { position: sticky; top: 68px; }
+
+    .overview-strip { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; margin-bottom: 1.5rem; }
+    .ov-card { border-radius: var(--radius); padding: 1rem 1.25rem; color: white; }
+    .ov-card.green { background: linear-gradient(135deg, var(--green), var(--green-l)); }
+    .ov-card.blue  { background: linear-gradient(135deg, var(--blue),  var(--blue-l)); }
+    .ov-card.red   { background: linear-gradient(135deg, var(--red),   var(--red-l)); }
+    .ov-num   { font-family: var(--font-display); font-size: 2.2rem; font-weight: 900; line-height: 1; }
+    .ov-label { font-size: 0.78rem; opacity: 0.85; margin-top: 3px; }
+
+    .pin-display {
+      display: inline-block;
+      background: var(--mist);
+      border: 1.5px solid var(--stone);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-family: var(--font-mono);
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 3px;
+    }
+
+    .phase-mini { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; }
+    .phase-mini-bar { flex: 1; height: 5px; background: var(--stone); border-radius: 99px; overflow: hidden; }
+    .phase-mini-fill { height: 100%; border-radius: 99px; }
+
+    .flag-warn { color: #e67e22; font-size: 0.75rem; font-weight: 700; }
+    .flag-ok   { color: var(--green); font-size: 0.75rem; font-weight: 700; }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .form-group { margin-bottom: 10px; }
+
+    .detail-section { display: none; }
+    .detail-section.open { display: block; }
+
+    .behind-list { list-style: none; }
+    .behind-list li { padding: 6px 0; border-bottom: 1px solid var(--stone); font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a class="topbar-brand" href="leader.html">🏔️ <span>Pack 369</span></a>
+  <div class="topbar-nav">
+    <a href="print.html"><span>Print</span></a>
+    <button class="btn btn-ghost btn-sm" onclick="signOut()" style="color:rgba(255,255,255,0.75); border-color:rgba(255,255,255,0.3);">Sign Out</button>
+  </div>
+</nav>
+
+<div class="hero" style="background: linear-gradient(135deg, var(--ink) 0%, #2d3561 100%);">
+  <div class="hero-inner">
+    <div class="hero-label">Pack 369 · Leader Dashboard</div>
+    <h1>Pack Overview</h1>
+    <p>Manage the scout roster, monitor progress across all three phases, and generate print sheets.</p>
+  </div>
+</div>
+
+<div class="container-wide" style="margin-top: 2rem;">
+
+  <!-- Overview Strip -->
+  <div class="overview-strip" id="overview-strip">
+    <div class="ov-card green"><div class="ov-num" id="ov-ps">—</div><div class="ov-label">💪 Physically Strong<br>Gold tier scouts</div></div>
+    <div class="ov-card blue"><div class="ov-num" id="ov-ma">—</div><div class="ov-label">🧠 Mentally Awake<br>Gold tier scouts</div></div>
+    <div class="ov-card red"><div class="ov-num" id="ov-ms">—</div><div class="ov-label">⭐ Morally Straight<br>Gold tier scouts</div></div>
+  </div>
+
+  <div class="leader-layout">
+    <!-- Sidebar -->
+    <div class="sidebar">
+
+      <!-- Add Scout -->
+      <div class="card mb-2">
+        <div class="card-header"><div class="card-title">Add Scout</div></div>
+        <div class="form-group"><label>Full Name</label><input type="text" id="new-name" placeholder="First Last"></div>
+        <div class="form-row">
+          <div class="form-group"><label>Den</label><input type="text" id="new-den" placeholder="Wolf Den"></div>
+          <div class="form-group"><label>Rank</label><input type="text" id="new-rank" placeholder="Wolf"></div>
+        </div>
+        <div class="form-group"><label>Parent / Guardian</label><input type="text" id="new-parent" placeholder="Parent Name"></div>
+        <div class="form-group">
+          <label>4-Digit PIN</label>
+          <input type="text" id="new-pin" placeholder="e.g. 4729" maxlength="4" pattern="[0-9]{4}" inputmode="numeric">
+          <div class="text-sm text-ghost mt-1">Share this PIN with the family. Must be unique.</div>
+        </div>
+        <button class="btn btn-primary w-full" onclick="addScout()">+ Add Scout</button>
+        <div id="add-error" class="pin-error mt-1"></div>
+      </div>
+
+      <!-- Alerts -->
+      <div class="card mb-2">
+        <div class="card-header"><div class="card-title">⚠️ Behind on Categories</div></div>
+        <div class="text-sm text-ghost mb-1">Scouts who haven't hit all categories in the current week.</div>
+        <ul class="behind-list" id="behind-list"><li class="text-ghost">Loading…</li></ul>
+      </div>
+
+    </div>
+
+    <!-- Main Panel -->
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">All Scouts</div>
+          <span id="scout-count" class="text-sm text-ghost"></span>
+        </div>
+        <div id="loading-msg" class="text-ghost text-sm" style="padding:1rem;">Loading scouts…</div>
+        <table class="scout-table" id="scout-table" style="display:none;">
+          <thead>
+            <tr>
+              <th>Scout</th>
+              <th>PIN</th>
+              <th>💪 Strong</th>
+              <th>🧠 Awake</th>
+              <th>⭐ Straight</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="scout-tbody"></tbody>
+        </table>
+      </div>
+
+      <!-- Scout Detail -->
+      <div class="card mt-2 detail-section" id="detail-section">
+        <div class="card-header">
+          <div class="card-title" id="detail-title">Scout Detail</div>
+          <button class="btn btn-ghost btn-sm" onclick="closeDetail()">✕</button>
+        </div>
+        <div id="detail-body"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+  SESSION.requireLeader();
+
+  let scouts  = [];
+  let allLogs = [];
+
+  async function init() {
+    try {
+      scouts  = await sb.select('scouts', 'select=id,name,den,rank,parent,pin&order=name');
+      allLogs = await sb.select('logs',   'select=scout_id,phase,day_num,category,logged_at');
+      render();
+    } catch(err) {
+      document.getElementById('loading-msg').textContent = 'Error loading data: ' + err.message;
+    }
+  }
+
+  function logsFor(scoutId) {
+    return allLogs.filter(l => l.scout_id === scoutId);
+  }
+
+  function countFor(scoutId, phaseId) {
+    return allLogs.filter(l => l.scout_id === scoutId && l.phase === phaseId).length;
+  }
+
+  function render() {
+    const phaseIds = Object.keys(APP.phases);
+
+    // Overview
+    phaseIds.forEach((pid, i) => {
+      const gold = scouts.filter(s => countFor(s.id, pid) >= 90).length;
+      document.getElementById(['ov-ps','ov-ma','ov-ms'][i]).textContent = gold;
+    });
+
+    // Behind list
+    const behindList = document.getElementById('behind-list');
+    const behind = [];
+    scouts.forEach(scout => {
+      phaseIds.forEach(pid => {
+        const cnt = countFor(scout.id, pid);
+        if (cnt === 0) return;
+        const maxDay  = Math.max(...allLogs.filter(l => l.scout_id === scout.id && l.phase === pid).map(l => l.day_num));
+        const weekNum = Math.ceil(maxDay / 7);
+        const start   = (weekNum - 1) * 7 + 1;
+        const end     = Math.min(weekNum * 7, 90);
+        const done    = new Set(allLogs.filter(l => l.scout_id === scout.id && l.phase === pid && l.day_num >= start && l.day_num <= end).map(l => l.category));
+        const missing = APP.phases[pid].categories.filter(c => !done.has(c.id));
+        if (missing.length > 0) behind.push({ scout, phase: APP.phases[pid].label, missing });
+      });
+    });
+    behindList.innerHTML = behind.length
+      ? behind.map(b => `<li><strong>${b.scout.name}</strong> (${b.phase}): missing ${b.missing.map(c=>c.label).join(', ')}</li>`).join('')
+      : '<li class="flag-ok">All scouts on track this week ✓</li>';
+
+    // Table
+    document.getElementById('loading-msg').style.display = 'none';
+    document.getElementById('scout-table').style.display = '';
+    document.getElementById('scout-count').textContent = `${scouts.length} scout${scouts.length !== 1 ? 's' : ''}`;
+
+    document.getElementById('scout-tbody').innerHTML = scouts.map(scout => {
+      const phaseCells = phaseIds.map((pid, i) => {
+        const count = countFor(scout.id, pid);
+        const pct   = Math.min(100, (count/90)*100);
+        const tier  = APP.getTier(count, pid);
+        const colors= ['green','blue','red'];
+        return `<td>
+          <div class="phase-mini">
+            <div class="phase-mini-bar"><div class="phase-mini-fill" style="background:var(--${colors[i]}); width:${pct}%"></div></div>
+            <span style="width:38px; text-align:right; font-size:0.75rem; color:var(--ghost);">${count}/90</span>
+          </div>
+          ${tier ? `<span class="tier-badge tier-${tier.level.toLowerCase()}" style="margin-top:3px;">${tier.emoji} ${tier.name}</span>` : ''}
+        </td>`;
+      }).join('');
+
+      return `<tr>
+        <td><div style="font-weight:700;">${scout.name}</div><div class="text-sm text-ghost">${scout.den} · ${scout.rank}</div></td>
+        <td><span class="pin-display">${scout.pin}</span></td>
+        ${phaseCells}
+        <td><button class="btn btn-ghost btn-sm" onclick="showDetail('${scout.id}')">Detail</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  function showDetail(scoutId) {
+    const scout     = scouts.find(s => s.id === scoutId);
+    const scoutLogs = logsFor(scoutId);
+    const phaseIds  = Object.keys(APP.phases);
+
+    document.getElementById('detail-title').textContent = `${scout.name} — ${scout.den}`;
+
+    let html = `<div class="grid-3 mb-2">`;
+    const colors = ['green','blue','red'];
+    phaseIds.forEach((pid, i) => {
+      const count = scoutLogs.filter(l => l.phase === pid).length;
+      const pct   = Math.min(100,(count/90)*100);
+      const tier  = APP.getTier(count, pid);
+      const phase = APP.phases[pid];
+      html += `<div style="border:2px solid var(--stone); border-radius:var(--radius); padding:1rem;">
+        <div style="font-weight:700; margin-bottom:6px;">${phase.emoji} ${phase.label}</div>
+        <div class="progress-wrap mb-1"><div class="progress-fill" style="background:var(--${colors[i]}); width:${pct}%"></div></div>
+        <div class="text-sm text-ghost">${count} / 90 days</div>
+        ${tier ? `<div class="mt-1"><span class="tier-badge tier-${tier.level.toLowerCase()}">${tier.emoji} ${tier.name}</span></div>` : '<div class="text-sm text-ghost mt-1">No tier yet</div>'}
+      </div>`;
+    });
+    html += `</div>`;
+
+    // Edit PIN
+    html += `<div class="card" style="box-shadow:none; border:2px solid var(--stone); padding:1rem;">
+      <div style="font-weight:700; margin-bottom:8px;">Family PIN</div>
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <span class="pin-display" id="detail-pin">${scout.pin}</span>
+        <input type="text" id="new-pin-edit" placeholder="New PIN" maxlength="4" inputmode="numeric" style="width:100px;">
+        <button class="btn btn-ghost btn-sm" onclick="updatePin('${scout.id}')">Update PIN</button>
+        <span id="pin-update-msg" class="text-sm text-ghost"></span>
+      </div>
+    </div>`;
+
+    html += `<div class="flex gap-1 mt-2">
+      <a href="print.html?scout=${scout.id}" class="btn btn-ghost btn-sm">🖨 Print Trackers</a>
+      <button class="btn btn-danger btn-sm" onclick="removeScout('${scout.id}')">Remove Scout</button>
+    </div>`;
+
+    document.getElementById('detail-body').innerHTML = html;
+    document.getElementById('detail-section').classList.add('open');
+    document.getElementById('detail-section').scrollIntoView({ behavior:'smooth' });
+  }
+
+  async function updatePin(scoutId) {
+    const newPin = document.getElementById('new-pin-edit').value.trim();
+    if (!/^\d{4}$/.test(newPin)) { alert('PIN must be exactly 4 digits.'); return; }
+    const exists = scouts.find(s => s.pin === newPin && s.id !== scoutId);
+    if (exists) { alert(`PIN ${newPin} is already used by ${exists.name}. Choose a different PIN.`); return; }
+    try {
+      await sb.update('scouts', { pin: newPin }, `id=eq.${scoutId}`);
+      scouts.find(s => s.id === scoutId).pin = newPin;
+      document.getElementById('detail-pin').textContent = newPin;
+      document.getElementById('pin-update-msg').textContent = '✓ Updated';
+      render();
+    } catch(err) { alert('Could not update PIN: ' + err.message); }
+  }
+
+  async function addScout() {
+    const name   = document.getElementById('new-name').value.trim();
+    const den    = document.getElementById('new-den').value.trim();
+    const rank   = document.getElementById('new-rank').value.trim();
+    const parent = document.getElementById('new-parent').value.trim();
+    const pin    = document.getElementById('new-pin').value.trim();
+    const errEl  = document.getElementById('add-error');
+    errEl.textContent = '';
+
+    if (!name)          { errEl.textContent = 'Please enter a scout name.'; return; }
+    if (!/^\d{4}$/.test(pin)) { errEl.textContent = 'PIN must be exactly 4 digits.'; return; }
+    if (scouts.find(s => s.pin === pin)) { errEl.textContent = `PIN ${pin} is already in use. Choose a different one.`; return; }
+
+    try {
+      const result = await sb.insert('scouts', { name, den, rank, parent, pin });
+      scouts.push(result[0]);
+      ['new-name','new-den','new-rank','new-parent','new-pin'].forEach(id => document.getElementById(id).value = '');
+      render();
+    } catch(err) { errEl.textContent = 'Could not add scout: ' + err.message; }
+  }
+
+  async function removeScout(scoutId) {
+    const scout = scouts.find(s => s.id === scoutId);
+    if (!confirm(`Remove ${scout.name}? This will permanently delete all their logged activity.`)) return;
+    try {
+      await sb.delete('logs',   `scout_id=eq.${scoutId}`);
+      await sb.delete('scouts', `id=eq.${scoutId}`);
+      scouts  = scouts.filter(s => s.id !== scoutId);
+      allLogs = allLogs.filter(l => l.scout_id !== scoutId);
+      closeDetail();
+      render();
+    } catch(err) { alert('Could not remove scout: ' + err.message); }
+  }
+
+  function closeDetail() { document.getElementById('detail-section').classList.remove('open'); }
+  function signOut()     { SESSION.clear(); location.href = 'index.html'; }
+
+  init();
+</script>
+</body>
+</html>

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pack 369 — Sign In</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="login-logo">🏔️</div>
+    <div class="login-title">Pack 369</div>
+    <div class="login-sub">New Hampshire · Scout Oath Challenge · 2026–2027</div>
+
+    <!-- Tabs -->
+    <div class="login-tabs">
+      <button class="login-tab active" id="tab-scout" onclick="showTab('scout')">🧒 Scout / Family</button>
+      <button class="login-tab" id="tab-leader" onclick="showTab('leader')">📋 Pack Leader</button>
+    </div>
+
+    <!-- Scout PIN Panel -->
+    <div id="panel-scout">
+      <p style="font-size: 0.88rem; color: var(--ghost); margin-bottom: 1rem;">
+        Enter your family's 4-digit PIN to access your scout's tracker.
+      </p>
+      <div class="pin-inputs">
+        <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" pattern="[0-9]" id="p0" oninput="pinInput(0)" onkeydown="pinKey(event,0)">
+        <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" pattern="[0-9]" id="p1" oninput="pinInput(1)" onkeydown="pinKey(event,1)">
+        <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" pattern="[0-9]" id="p2" oninput="pinInput(2)" onkeydown="pinKey(event,2)">
+        <input class="pin-digit" type="password" maxlength="1" inputmode="numeric" pattern="[0-9]" id="p3" oninput="pinInput(3)" onkeydown="pinKey(event,3)">
+      </div>
+      <div class="pin-error" id="pin-error"></div>
+      <button class="btn btn-primary w-full" id="pin-btn" onclick="submitPin()" disabled>Sign In →</button>
+      <p style="font-size: 0.78rem; color: var(--ghost); margin-top: 1rem;">
+        Your PIN was included in your welcome email from the pack leader.<br>Contact your pack leader if you need help.
+      </p>
+    </div>
+
+    <!-- Leader Panel -->
+    <div id="panel-leader" style="display:none;">
+      <p style="font-size: 0.88rem; color: var(--ghost); margin-bottom: 1rem;">
+        Enter the leader password to access the full dashboard.
+      </p>
+      <div class="password-input-wrap">
+        <label>Leader Password</label>
+        <input type="password" id="leader-pw" placeholder="Enter password" onkeydown="if(event.key==='Enter') submitLeader()">
+        <button class="pw-toggle" onclick="togglePw()" title="Show/hide">👁</button>
+      </div>
+      <div class="pin-error" id="leader-error"></div>
+      <button class="btn btn-primary w-full" onclick="submitLeader()">Sign In →</button>
+    </div>
+
+    <div id="loading" style="display:none; padding: 1rem; color: var(--ghost); font-size:0.88rem;">
+      Signing in…
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+  // If already logged in, redirect immediately
+  const sess = SESSION.get();
+  if (sess.type === 'leader') location.href = 'leader.html';
+  if (sess.type === 'scout' && sess.scoutId) location.href = 'scout.html';
+
+  function showTab(tab) {
+    document.getElementById('panel-scout').style.display  = tab === 'scout'  ? 'block' : 'none';
+    document.getElementById('panel-leader').style.display = tab === 'leader' ? 'block' : 'none';
+    document.getElementById('tab-scout').classList.toggle('active',  tab === 'scout');
+    document.getElementById('tab-leader').classList.toggle('active', tab === 'leader');
+    document.getElementById('pin-error').textContent    = '';
+    document.getElementById('leader-error').textContent = '';
+  }
+
+  // ── PIN INPUT LOGIC ──
+  function getPin() {
+    return ['p0','p1','p2','p3'].map(id => document.getElementById(id).value).join('');
+  }
+
+  function pinInput(i) {
+    const val = document.getElementById('p' + i).value;
+    if (val && i < 3) document.getElementById('p' + (i+1)).focus();
+    document.getElementById('pin-btn').disabled = getPin().length < 4;
+    document.getElementById('pin-error').textContent = '';
+  }
+
+  function pinKey(e, i) {
+    if (e.key === 'Backspace' && !document.getElementById('p'+i).value && i > 0) {
+      document.getElementById('p'+(i-1)).focus();
+    }
+    if (e.key === 'Enter' && getPin().length === 4) submitPin();
+  }
+
+  async function submitPin() {
+    const pin = getPin();
+    if (pin.length < 4) return;
+    setLoading(true);
+    try {
+      const scouts = await sb.select('scouts', `pin=eq.${pin}&select=id,name,den`);
+      if (!scouts || scouts.length === 0) {
+        setLoading(false);
+        document.getElementById('pin-error').textContent = 'Incorrect PIN. Please try again.';
+        ['p0','p1','p2','p3'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('p0').focus();
+        document.getElementById('pin-btn').disabled = true;
+        return;
+      }
+      SESSION.set('scout', scouts[0].id);
+      location.href = 'scout.html';
+    } catch(err) {
+      setLoading(false);
+      document.getElementById('pin-error').textContent = 'Connection error. Check your internet and try again.';
+    }
+  }
+
+  function submitLeader() {
+    const pw = document.getElementById('leader-pw').value;
+    if (pw === LEADER_PASSWORD) {
+      SESSION.set('leader', null);
+      location.href = 'leader.html';
+    } else {
+      document.getElementById('leader-error').textContent = 'Incorrect password. Please try again.';
+      document.getElementById('leader-pw').value = '';
+    }
+  }
+
+  function togglePw() {
+    const input = document.getElementById('leader-pw');
+    input.type = input.type === 'password' ? 'text' : 'password';
+  }
+
+  function setLoading(on) {
+    document.getElementById('loading').style.display    = on ? 'block' : 'none';
+    document.getElementById('panel-scout').style.display = on ? 'none' : 'block';
+  }
+
+  // Focus first PIN digit on load
+  document.getElementById('p0').focus();
+</script>
+</body>
+</html>
