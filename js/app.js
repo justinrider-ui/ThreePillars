@@ -1,7 +1,7 @@
 // ── PACK 369 — CONFIG ──
 // Replace these with your actual Supabase project values after setup.
 // See README.md for instructions on where to find these.
-const SUPABASE_URL = 'https://xgzwgyoyimlycctckqfh.supabase.co/rest/v1/';
+const SUPABASE_URL = 'https://xgzwgyoyimlycctckqfh.supabase.co/';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnendneW95aW1seWNjdGNrcWZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5NjI4NDUsImV4cCI6MjA5NTUzODg0NX0.6PJxApO2-W0C6mHswGZmS8QRaLhX4HXd9WHi-CoFiT8';
 const LEADER_PASSWORD = 'EE@lum05'; // change this to something memorable
 
