@@ -539,3 +539,49 @@ select:focus, input:focus {
 .pin-error { color: #c0392b; font-size: 0.82rem; font-weight: 600; min-height: 1.2em; margin-bottom: 0.5rem; }
 .password-input-wrap { position: relative; margin-bottom: 1.5rem; text-align: left; }
 .pw-toggle { position: absolute; right: 12px; top: 38px; background: none; border: none; cursor: pointer; font-size: 1rem; color: var(--ghost); }
+
+/* ── LOGOS ── */
+
+/* Topbar - small Cub Scouts diamond */
+.topbar-cs-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+/* Login card - side by side logos */
+.login-logos {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 1rem;
+}
+.login-pack-logo {
+  width: 90px;
+  height: 90px;
+  object-fit: contain;
+}
+.login-cs-logo {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+/* Hero - Pack logo as ghost watermark, right side */
+.hero-watermark {
+  position: absolute;
+  right: -20px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 220px;
+  height: 220px;
+  object-fit: contain;
+  opacity: 0.12;
+  pointer-events: none;
+  z-index: 0;
+  filter: brightness(10);
+}
