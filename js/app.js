@@ -1,9 +1,9 @@
 // ── PACK 369 — CONFIG ──
 // Replace these with your actual Supabase project values after setup.
 // See README.md for instructions on where to find these.
-const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
-const LEADER_PASSWORD = 'YOUR_LEADER_PASSWORD'; // change this to something memorable
+const SUPABASE_URL = 'https://xgzwgyoyimlycctckqfh.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnendneW95aW1seWNjdGNrcWZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5NjI4NDUsImV4cCI6MjA5NTUzODg0NX0.6PJxApO2-W0C6mHswGZmS8QRaLhX4HXd9WHi-CoFiT8';
+const LEADER_PASSWORD = '578080'; // change this to something memorable
 
 // ── SUPABASE CLIENT (lightweight, no npm needed) ──
 const sb = {
