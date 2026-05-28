@@ -1,9 +1,9 @@
 // ── PACK 369 — CONFIG ──
 // Replace these with your actual Supabase project values after setup.
 // See README.md for instructions on where to find these.
-const SUPABASE_URL = 'https://xgzwgyoyimlycctckqfh.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnendneW95aW1seWNjdGNrcWZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5NjI4NDUsImV4cCI6MjA5NTUzODg0NX0.6PJxApO2-W0C6mHswGZmS8QRaLhX4HXd9WHi-CoFiT8';
-const LEADER_PASSWORD = 'EE@lum05'; // change this to something memorable
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const LEADER_PASSWORD = 'YOUR_LEADER_PASSWORD'; // change this to something memorable
 
 // ── SUPABASE CLIENT (lightweight, no npm needed) ──
 const sb = {
@@ -170,4 +170,46 @@ const APP = {
     }
     return out;
   },
+};
+
+// ── PHASE UNLOCK DATES ──
+// Each phase unlocks on its start date. Leaders always see everything.
+APP.unlockDates = {
+  'physically-strong': { month: 9,  day: 1  }, // September 1
+  'mentally-awake':    { month: 12, day: 1  }, // December 1
+  'morally-straight':  { month: 3,  day: 1  }, // March 1
+};
+
+APP.isUnlocked = function(phaseId) {
+  // Leaders always have full access
+  if (SESSION.isLeader()) return true;
+  const now    = new Date();
+  const month  = now.getMonth() + 1; // 1-based
+  const day    = now.getDate();
+  const year   = now.getFullYear();
+  const unlock = this.unlockDates[phaseId];
+
+  // Build comparable integers: YYYYMMDD
+  const todayInt  = year * 10000 + month * 100 + day;
+
+  // Determine which year the unlock applies to
+  // PS = Sept of current school year, MA = Dec same year, MS = March next year
+  let unlockYear = year;
+  // If we're past March (spring), PS has already started this school year
+  // School year runs Sept–May, so use the current calendar year for Sept/Dec
+  // and current year for March (it's in the same school year that started prev Sept)
+  // Simple approach: if the unlock month hasn't happened yet this year, it's this year;
+  // if it has, it already unlocked. We just compare month/day against today.
+  const unlockInt = unlockYear * 10000 + unlock.month * 100 + unlock.day;
+
+  // Also check previous year in case school year spans calendar years
+  const unlockIntPrev = (unlockYear - 1) * 10000 + unlock.month * 100 + unlock.day;
+
+  return todayInt >= unlockInt || todayInt >= unlockIntPrev;
+};
+
+APP.unlockDateLabel = function(phaseId) {
+  const months = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
+  const u = this.unlockDates[phaseId];
+  return `${months[u.month]} ${u.day}`;
 };

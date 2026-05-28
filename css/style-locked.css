@@ -585,3 +585,30 @@ select:focus, input:focus {
   z-index: 0;
   filter: brightness(10);
 }
+
+/* ── PHASE LOCKING ── */
+.phase-tab-locked {
+  opacity: 0.45;
+  cursor: not-allowed !important;
+  position: relative;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 0.78rem;
+  padding: 7px 10px;
+}
+.phase-tab-locked:hover {
+  color: var(--ghost) !important;
+  background: transparent !important;
+}
+.tab-unlock-date {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 500;
+  opacity: 0.8;
+  letter-spacing: 0.2px;
+}
+.phase-locked-panel {
+  border: 2px dashed var(--stone) !important;
+  background: var(--mist) !important;
+  box-shadow: none !important;
+}
