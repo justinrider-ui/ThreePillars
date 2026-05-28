@@ -164,7 +164,9 @@
       document.getElementById('scout-name-display').innerHTML = `🧒 ${scout.name}`;
       document.getElementById('scout-den-display').textContent = `${scout.den} · ${scout.rank}`;
 
-      const logs = await sb.select('logs', `scout_id=eq.${scoutId}&select=phase,day_num,category,logged_at`);
+      const season = APP.currentSeason();
+      const seasonFilter = season ? `&season=eq.${season}` : '';
+      const logs = await sb.select('logs', `scout_id=eq.${scoutId}&select=phase,day_num,category,logged_at,season${seasonFilter}`);
       allLogs = logs || [];
 
       renderPhaseTabs();
@@ -180,7 +182,7 @@
     const hero = document.getElementById('hero');
     hero.style.background = `linear-gradient(135deg, var(--${phase.color}), var(--${phase.color}-l))`;
     document.getElementById('hero-title').textContent = phase.label + ' Phase';
-    document.getElementById('hero-label').textContent = `Pack 369 · ${phase.period}`;
+    document.getElementById('hero-label').textContent = `Pack 369 · ${APP.schoolYearLabel()} · ${phase.period}`;
     document.getElementById('hero-sub').textContent   = phase.oathLine;
     selectedCatId = null;
     document.getElementById('selected-cat-label').textContent = 'Select a category, then tap a day';
@@ -224,7 +226,20 @@
         document.getElementById('main').appendChild(lockEl);
       }
       lockEl.style.display = 'block';
-      lockEl.innerHTML = `
+      const offSeason = APP.isOffSeason();
+      lockEl.innerHTML = offSeason ? `
+        <div style="text-align:center; padding: 2rem 1rem;">
+          <div style="font-size:3rem; margin-bottom:1rem;">☀️</div>
+          <div style="font-family:var(--font-display); font-size:1.4rem; margin-bottom:0.5rem;">Off Season</div>
+          <div style="color:var(--ghost); font-size:0.9rem; margin-bottom:1.5rem;">
+            Pack 369 is taking a summer break!<br>
+            The <strong>${APP.schoolYearLabel()}</strong> program opens <strong>September 1</strong>.
+          </div>
+          <div style="background:var(--mist); border-radius:var(--radius); padding:1rem; display:inline-block; text-align:left; max-width:360px;">
+            <div style="font-size:0.78rem; font-weight:700; color:var(--ghost); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">Coming this season</div>
+            ${Object.values(APP.phases).map(p => `<div style="font-size:0.88rem; margin-bottom:6px;">${p.emoji} <strong>${p.label}</strong> <span style="color:var(--ghost); font-size:0.78rem;">${p.period}</span></div>`).join('')}
+          </div>
+        </div>` : `
         <div style="text-align:center; padding: 2rem 1rem;">
           <div style="font-size:3rem; margin-bottom:1rem;">🔒</div>
           <div style="font-family:var(--font-display); font-size:1.4rem; margin-bottom:0.5rem;">${phase.label}</div>
@@ -353,6 +368,7 @@
         phase:    currentPhaseId,
         day_num:  pendingDay,
         category: selectedCatId,
+        season:   APP.currentSeason(),
         logged_at: new Date().toISOString(),
       });
       allLogs = allLogs.filter(l => !(l.phase === currentPhaseId && l.day_num === pendingDay));

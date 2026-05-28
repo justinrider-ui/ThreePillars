@@ -172,44 +172,79 @@ const APP = {
   },
 };
 
-// ── PHASE UNLOCK DATES ──
-// Each phase unlocks on its start date. Leaders always see everything.
-APP.unlockDates = {
-  'physically-strong': { month: 9,  day: 1  }, // September 1
-  'mentally-awake':    { month: 12, day: 1  }, // December 1
-  'morally-straight':  { month: 3,  day: 1  }, // March 1
+// ── SCHOOL YEAR & PHASE UNLOCK LOGIC ──
+//
+// School year runs Sept 1 – June 30.
+// July 1 – Aug 31 = off-season (all phases locked).
+// June 1 – June 30 = grace period (previous season stays open).
+//
+// Given a date, getSchoolYear() returns the starting year of the active season.
+// e.g. Sept 1 2026 → "2026", March 2027 → "2026" (same season), July 2026 → off-season.
+
+APP.getSchoolYear = function(date) {
+  const d = date || new Date();
+  const month = d.getMonth() + 1; // 1-based
+  const year  = d.getFullYear();
+  // July–August: off-season, upcoming season starts next September
+  if (month >= 7 && month <= 8) return null; // null = off-season
+  // September–December: school year just started (year = current)
+  if (month >= 9) return year;
+  // January–June: we're in the school year that started last September
+  return year - 1;
+};
+
+APP.schoolYearLabel = function() {
+  const sy = this.getSchoolYear();
+  if (!sy) {
+    const now  = new Date();
+    const next = now.getFullYear() + (now.getMonth() >= 8 ? 1 : 0);
+    return `${next}–${next + 1}`;
+  }
+  return `${sy}–${sy + 1}`;
+};
+
+APP.isOffSeason = function() {
+  return this.getSchoolYear() === null;
+};
+
+// Returns the unlock date for a phase in the current school year as a Date object.
+// physically-strong: Sept 1 of school year start
+// mentally-awake:    Dec 1 of school year start
+// morally-straight:  Mar 1 of school year start + 1
+APP.getUnlockDate = function(phaseId) {
+  const sy = this.getSchoolYear();
+  if (sy === null) return null; // off-season, nothing unlocks
+  const map = {
+    'physically-strong': new Date(sy,     8,  1), // Sept 1
+    'mentally-awake':    new Date(sy,    11,  1), // Dec 1
+    'morally-straight':  new Date(sy + 1, 2,  1), // Mar 1 next year
+  };
+  return map[phaseId];
 };
 
 APP.isUnlocked = function(phaseId) {
-  // Leaders always have full access
-  if (SESSION.isLeader()) return true;
-  const now    = new Date();
-  const month  = now.getMonth() + 1; // 1-based
-  const day    = now.getDate();
-  const year   = now.getFullYear();
-  const unlock = this.unlockDates[phaseId];
-
-  // Build comparable integers: YYYYMMDD
-  const todayInt  = year * 10000 + month * 100 + day;
-
-  // Determine which year the unlock applies to
-  // PS = Sept of current school year, MA = Dec same year, MS = March next year
-  let unlockYear = year;
-  // If we're past March (spring), PS has already started this school year
-  // School year runs Sept–May, so use the current calendar year for Sept/Dec
-  // and current year for March (it's in the same school year that started prev Sept)
-  // Simple approach: if the unlock month hasn't happened yet this year, it's this year;
-  // if it has, it already unlocked. We just compare month/day against today.
-  const unlockInt = unlockYear * 10000 + unlock.month * 100 + unlock.day;
-
-  // Also check previous year in case school year spans calendar years
-  const unlockIntPrev = (unlockYear - 1) * 10000 + unlock.month * 100 + unlock.day;
-
-  return todayInt >= unlockInt || todayInt >= unlockIntPrev;
+  if (SESSION.isLeader()) return true;  // leaders always see everything
+  if (this.isOffSeason()) return false; // July–Aug: nothing unlocked
+  const unlock = this.getUnlockDate(phaseId);
+  if (!unlock) return false;
+  return new Date() >= unlock;
 };
 
 APP.unlockDateLabel = function(phaseId) {
-  const months = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
-  const u = this.unlockDates[phaseId];
-  return `${months[u.month]} ${u.day}`;
+  if (this.isOffSeason()) {
+    const now  = new Date();
+    const yr   = now.getFullYear() + 1;
+    return `September 1, ${yr}`;
+  }
+  const unlock = this.getUnlockDate(phaseId);
+  if (!unlock) return 'TBD';
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return `${months[unlock.getMonth()]} ${unlock.getDate()}, ${unlock.getFullYear()}`;
+};
+
+// Returns the season string for logging (e.g. "2026-2027")
+APP.currentSeason = function() {
+  const sy = this.getSchoolYear();
+  if (!sy) return null;
+  return `${sy}-${sy + 1}`;
 };
