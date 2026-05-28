@@ -111,7 +111,13 @@
       <div class="card">
         <div class="card-header">
           <div class="card-title">All Scouts</div>
-          <span id="scout-count" class="text-sm text-ghost"></span>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <label style="margin:0; text-transform:none; font-size:0.82rem; font-weight:600; color:var(--ghost);">Season</label>
+            <select id="season-select" onchange="changeSeason()" style="width:auto; padding:5px 10px; font-size:0.82rem;">
+              <option value="">Loading…</option>
+            </select>
+            <span id="scout-count" class="text-sm text-ghost"></span>
+          </div>
         </div>
         <div id="loading-msg" class="text-ghost text-sm" style="padding:1rem;">Loading scouts…</div>
         <table class="scout-table" id="scout-table" style="display:none;">
@@ -145,19 +151,61 @@
 <script>
   SESSION.requireLeader();
 
-  let scouts  = [];
-  let allLogs = [];
+  let scouts        = [];
+  let allLogs       = [];       // logs for the selected season
+  let availSeasons  = [];       // all seasons found in the DB
+  let currentSeason = APP.currentSeason() || '2026-2027'; // default to current season
 
+  // ── INIT ──
   async function init() {
     try {
-      scouts  = await sb.select('scouts', 'select=id,name,den,rank,parent,pin&order=name');
-      allLogs = await sb.select('logs',   'select=scout_id,phase,day_num,category,logged_at');
+      scouts = await sb.select('scouts', 'select=id,name,den,rank,parent,pin&order=name');
+
+      // Discover all seasons that exist in logs
+      const seasonRows = await sb.select('logs', 'select=season&order=season.desc');
+      const seen = new Set();
+      seasonRows.forEach(r => { if (r.season) seen.add(r.season); });
+      availSeasons = [...seen].sort().reverse();
+
+      // Always include the current season even if no logs yet
+      if (currentSeason && !seen.has(currentSeason)) availSeasons.unshift(currentSeason);
+
+      buildSeasonDropdown();
+      await loadLogsForSeason(currentSeason);
       render();
     } catch(err) {
       document.getElementById('loading-msg').textContent = 'Error loading data: ' + err.message;
     }
   }
 
+  function buildSeasonDropdown() {
+    const sel = document.getElementById('season-select');
+    sel.innerHTML = availSeasons.map(s =>
+      `<option value="${s}" ${s === currentSeason ? 'selected' : ''}>${s}${s === (APP.currentSeason() || '') ? ' (current)' : ''}</option>`
+    ).join('');
+    if (availSeasons.length === 0) {
+      sel.innerHTML = `<option value="${currentSeason}">${currentSeason} (current)</option>`;
+    }
+  }
+
+  async function changeSeason() {
+    currentSeason = document.getElementById('season-select').value;
+    document.getElementById('loading-msg').style.display = 'block';
+    document.getElementById('loading-msg').textContent = `Loading ${currentSeason}…`;
+    document.getElementById('scout-table').style.display = 'none';
+    closeDetail();
+    await loadLogsForSeason(currentSeason);
+    render();
+  }
+
+  async function loadLogsForSeason(season) {
+    const q = season
+      ? `select=scout_id,phase,day_num,category,logged_at,season&season=eq.${season}`
+      : `select=scout_id,phase,day_num,category,logged_at,season`;
+    allLogs = await sb.select('logs', q);
+  }
+
+  // ── HELPERS ──
   function logsFor(scoutId) {
     return allLogs.filter(l => l.scout_id === scoutId);
   }
@@ -166,39 +214,54 @@
     return allLogs.filter(l => l.scout_id === scoutId && l.phase === phaseId).length;
   }
 
+  const isCurrentSeason = () => currentSeason === (APP.currentSeason() || currentSeason);
+
+  // ── RENDER ──
   function render() {
     const phaseIds = Object.keys(APP.phases);
 
-    // Overview
+    // Season label in overview
+    const seasonLabel = isCurrentSeason() ? 'current season' : currentSeason;
+
+    // Overview strip
     phaseIds.forEach((pid, i) => {
       const gold = scouts.filter(s => countFor(s.id, pid) >= 90).length;
       document.getElementById(['ov-ps','ov-ma','ov-ms'][i]).textContent = gold;
     });
-
-    // Behind list
-    const behindList = document.getElementById('behind-list');
-    const behind = [];
-    scouts.forEach(scout => {
-      phaseIds.forEach(pid => {
-        const cnt = countFor(scout.id, pid);
-        if (cnt === 0) return;
-        const maxDay  = Math.max(...allLogs.filter(l => l.scout_id === scout.id && l.phase === pid).map(l => l.day_num));
-        const weekNum = Math.ceil(maxDay / 7);
-        const start   = (weekNum - 1) * 7 + 1;
-        const end     = Math.min(weekNum * 7, 90);
-        const done    = new Set(allLogs.filter(l => l.scout_id === scout.id && l.phase === pid && l.day_num >= start && l.day_num <= end).map(l => l.category));
-        const missing = APP.phases[pid].categories.filter(c => !done.has(c.id));
-        if (missing.length > 0) behind.push({ scout, phase: APP.phases[pid].label, missing });
-      });
+    // Update overview sub-labels to reflect season
+    document.querySelectorAll('.ov-label').forEach((el, i) => {
+      const phase = Object.values(APP.phases)[i];
+      el.innerHTML = `${phase.emoji} ${phase.label}<br>Gold tier · ${seasonLabel}`;
     });
-    behindList.innerHTML = behind.length
-      ? behind.map(b => `<li><strong>${b.scout.name}</strong> (${b.phase}): missing ${b.missing.map(c=>c.label).join(', ')}</li>`).join('')
-      : '<li class="flag-ok">All scouts on track this week ✓</li>';
+
+    // Behind list — only meaningful for current season
+    const behindList = document.getElementById('behind-list');
+    if (!isCurrentSeason()) {
+      behindList.innerHTML = `<li class="text-ghost" style="font-style:italic;">Viewing ${currentSeason} — historical data only.</li>`;
+    } else {
+      const behind = [];
+      scouts.forEach(scout => {
+        phaseIds.forEach(pid => {
+          const cnt = countFor(scout.id, pid);
+          if (cnt === 0) return;
+          const maxDay  = Math.max(...allLogs.filter(l => l.scout_id === scout.id && l.phase === pid).map(l => l.day_num));
+          const weekNum = Math.ceil(maxDay / 7);
+          const start   = (weekNum - 1) * 7 + 1;
+          const end     = Math.min(weekNum * 7, 90);
+          const done    = new Set(allLogs.filter(l => l.scout_id === scout.id && l.phase === pid && l.day_num >= start && l.day_num <= end).map(l => l.category));
+          const missing = APP.phases[pid].categories.filter(c => !done.has(c.id));
+          if (missing.length > 0) behind.push({ scout, phase: APP.phases[pid].label, missing });
+        });
+      });
+      behindList.innerHTML = behind.length
+        ? behind.map(b => `<li><strong>${b.scout.name}</strong> (${b.phase}): missing ${b.missing.map(c=>c.label).join(', ')}</li>`).join('')
+        : '<li class="flag-ok">All scouts on track this week ✓</li>';
+    }
 
     // Table
     document.getElementById('loading-msg').style.display = 'none';
     document.getElementById('scout-table').style.display = '';
-    document.getElementById('scout-count').textContent = `${scouts.length} scout${scouts.length !== 1 ? 's' : ''}`;
+    document.getElementById('scout-count').textContent = `${scouts.length} scout${scouts.length !== 1 ? 's' : ''} · ${currentSeason}`;
 
     document.getElementById('scout-tbody').innerHTML = scouts.map(scout => {
       const phaseCells = phaseIds.map((pid, i) => {
@@ -224,12 +287,13 @@
     }).join('');
   }
 
+  // ── DETAIL ──
   function showDetail(scoutId) {
     const scout     = scouts.find(s => s.id === scoutId);
     const scoutLogs = logsFor(scoutId);
     const phaseIds  = Object.keys(APP.phases);
 
-    document.getElementById('detail-title').textContent = `${scout.name} — ${scout.den}`;
+    document.getElementById('detail-title').textContent = `${scout.name} — ${scout.den} · ${currentSeason}`;
 
     let html = `<div class="grid-3 mb-2">`;
     const colors = ['green','blue','red'];
@@ -247,20 +311,22 @@
     });
     html += `</div>`;
 
-    // Edit PIN
-    html += `<div class="card" style="box-shadow:none; border:2px solid var(--stone); padding:1rem;">
-      <div style="font-weight:700; margin-bottom:8px;">Family PIN</div>
-      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-        <span class="pin-display" id="detail-pin">${scout.pin}</span>
-        <input type="text" id="new-pin-edit" placeholder="New PIN" maxlength="4" inputmode="numeric" style="width:100px;">
-        <button class="btn btn-ghost btn-sm" onclick="updatePin('${scout.id}')">Update PIN</button>
-        <span id="pin-update-msg" class="text-sm text-ghost"></span>
-      </div>
-    </div>`;
+    // PIN editing only shown for current season
+    if (isCurrentSeason()) {
+      html += `<div class="card" style="box-shadow:none; border:2px solid var(--stone); padding:1rem;">
+        <div style="font-weight:700; margin-bottom:8px;">Family PIN</div>
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <span class="pin-display" id="detail-pin">${scout.pin}</span>
+          <input type="text" id="new-pin-edit" placeholder="New PIN" maxlength="4" inputmode="numeric" style="width:100px;">
+          <button class="btn btn-ghost btn-sm" onclick="updatePin('${scout.id}')">Update PIN</button>
+          <span id="pin-update-msg" class="text-sm text-ghost"></span>
+        </div>
+      </div>`;
+    }
 
     html += `<div class="flex gap-1 mt-2">
-      <a href="print.html?scout=${scout.id}" class="btn btn-ghost btn-sm">🖨 Print Trackers</a>
-      <button class="btn btn-danger btn-sm" onclick="removeScout('${scout.id}')">Remove Scout</button>
+      <a href="print.html?scout=${scout.id}&season=${currentSeason}" class="btn btn-ghost btn-sm">🖨 Print Trackers</a>
+      ${isCurrentSeason() ? `<button class="btn btn-danger btn-sm" onclick="removeScout('${scout.id}')">Remove Scout</button>` : ''}
     </div>`;
 
     document.getElementById('detail-body').innerHTML = html;
@@ -291,9 +357,9 @@
     const errEl  = document.getElementById('add-error');
     errEl.textContent = '';
 
-    if (!name)          { errEl.textContent = 'Please enter a scout name.'; return; }
-    if (!/^\d{4}$/.test(pin)) { errEl.textContent = 'PIN must be exactly 4 digits.'; return; }
-    if (scouts.find(s => s.pin === pin)) { errEl.textContent = `PIN ${pin} is already in use. Choose a different one.`; return; }
+    if (!name)               { errEl.textContent = 'Please enter a scout name.'; return; }
+    if (!/^\d{4}$/.test(pin)){ errEl.textContent = 'PIN must be exactly 4 digits.'; return; }
+    if (scouts.find(s => s.pin === pin)) { errEl.textContent = `PIN ${pin} is already in use.`; return; }
 
     try {
       const result = await sb.insert('scouts', { name, den, rank, parent, pin });
